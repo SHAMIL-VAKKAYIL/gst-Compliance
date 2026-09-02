@@ -17,3 +17,73 @@ Frontend: React, Vite
 LLM: Claude API (Anthropic)
 OCR/Extraction: pdf-parse / Tesseract.js
 Auth: JWT
+
+gst-compliance-platform/
+├── src/
+│   ├── modules/
+│   │   ├── auth/
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── auth.types.ts
+│   │   │   └── auth.repository.ts
+│   │   │
+│   │   ├── invoices/
+│   │   │   ├── invoices.controller.ts
+│   │   │   ├── invoices.service.ts
+│   │   │   ├── invoices.routes.ts
+│   │   │   ├── invoices.types.ts
+│   │   │   ├── invoices.repository.ts
+│   │   │   ├── extraction.service.ts 
+│   │   │   └── parsers/
+│   │   │       ├── pdf-parser.ts
+│   │   │       └── ocr-parser.ts
+│   │   │
+│   │   │
+│   │   ├── validation/
+│   │   │   ├── validation.service.ts       # runs all rules, returns results
+│   │   │   ├── validation.types.ts
+│   │   │   ├── validation.repository.ts
+│   │   │   └── rules/
+│   │   │       ├── gstin-checksum.rule.ts
+│   │   │       ├── tax-split.rule.ts
+│   │   │       ├── hsn-code.rule.ts
+│   │   │       └── mandatory-fields.rule.ts
+│   │   │
+│   │   └── llm-summary/
+│   │       ├── llm-summary.service.ts      # Claude API calls, prompt building
+│   │       ├── llm-summary.types.ts
+│   │       ├── llm-summary.repository.ts
+│   │       └── prompts/
+│   │           └── compliance-summary.prompt.ts
+│   │
+│   ├── shared/
+│   │   ├── middleware/
+│   │   │   ├── auth.middleware.ts
+│   │   │   ├── error-handler.middleware.ts
+│   │   │   └── upload.middleware.ts        # multer config
+│   │   ├── database/
+│   │   │   ├── db.ts                       # pg pool
+│   │   │   └── migrations/
+│   │   ├── utils/
+│   │   │   ├── logger.ts
+│   │   │   └── async-handler.ts
+│   │   └── errors/
+│   │       └── app-error.ts
+│   │
+│   ├── config/
+│   │   ├── env.ts
+│   │   └── constants.ts                    # HSN→rate table, state codes, etc.
+│   │
+│   ├── app.ts                              # express app setup, mounts routes
+│   └── server.ts                           # entry point, starts listener
+│
+├── tests/
+│   └── (mirror src/modules structure)
+│
+├── .env.example
+├── package.json
+├── tsconfig.json
+└── README.md
+
+[text](../../../..)
