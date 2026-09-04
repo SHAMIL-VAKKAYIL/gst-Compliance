@@ -40,7 +40,6 @@ model Invoice {
   vendorName       String?
   amount           Decimal?         @db.Decimal(12, 2)
   extractionStatus ExtractionStatus
-  failureReason    FailureReason?
   summaryStatus    SummaryStatus    @default(PENDING)
   summary          String?
   createdAt        DateTime         @default(now())

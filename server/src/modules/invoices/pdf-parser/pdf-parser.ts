@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
-import { ExtractionResult, ExtractedInvoiceData, LineItem } from '../invoices.types';
+import { ExtractionResult, ExtractedInvoiceData } from '../invoices.types';
+import { parseInvoiceText } from '../../../shared/utils/invoice-parser.utils';
 import { PDFParse } from 'pdf-parse';
 
 export class PDFParser {
@@ -19,16 +20,13 @@ export class PDFParser {
 
       console.log(`[PDFParser] Processing PDF buffer (${fileBuffer.length} bytes)`);
 
-      // Extract text from PDF buffer
       const rawText = await this.extractPDFText(fileBuffer);
-      // console.log('text -invoice', rawText);
 
-      // Parse extracted text to invoice data
       const invoiceData = this.parsePDFText(rawText);
-      // console.log('pattern -invoice', invoiceData);
 
       return {
         success: true,
+        rawText: rawText,
         data: invoiceData,
         confidence: 0.95 // PDF extraction usually has high confidence
       };
@@ -68,64 +66,15 @@ export class PDFParser {
    * Parse extracted PDF text to structured invoice data
    */
   private parsePDFText(text: string): ExtractedInvoiceData {
-    // Helper regex patterns
-    const invoiceNumberPattern = /invoice\s*#?\s*([A-Z0-9\-]+)/i;
-    // const datePattern = /date\s*[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})/i;
-    const datePattern = /date\s*[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}[\/\-]\d{2}[\/\-]\d{4})/i;
-    const vendorPattern = /vendor\s*[:\s]+([^\n]+)/i;
-    // const gstnPattern = /gstin\s*[:\s]+([0-9A-Z]+)/i;
-    const gstnPattern = /gstin?\s*[:\s]+([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}[Z]{1}[0-9A-Z]{1})/i;
-    // const totalPattern = /total\s*[:\s]*\$?([\d,\.]+)/i;
-    const totalPattern = /total[^\n]*?([\d,]+\.\d{2})\s*$/im;
-    const taxPattern = /tax\s*[:\s]*\$?([\d,\.]+)/i;
-
-    // Extract values using regex
-    const invoiceNumberMatch = text.match(invoiceNumberPattern);
-    const dateMatch = text.match(datePattern);
-    const vendorMatch = text.match(vendorPattern);
-    const gstnMatch = text.match(gstnPattern);
-    const totalMatch = text.match(totalPattern);
-    const taxMatch = text.match(taxPattern);
-
-    // Parse line items (basic implementation)
-    const lineItems = this.parseLineItems(text);
-
-    // Calculate subtotal
-    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-
-    return {
-      invoiceNumber: invoiceNumberMatch ? invoiceNumberMatch[1].trim() : 'UNKNOWN',
-      vendorName: vendorMatch ? vendorMatch[1].trim() : 'UNKNOWN',
-      vendorGSTIN: gstnMatch ? gstnMatch[1].trim() : 'UNKNOWN',
-      invoiceDate: dateMatch ? dateMatch[1].trim() : new Date().toISOString().split('T')[0],
-      invoiceAmount: subtotal,
-      tax: taxMatch ? parseFloat(taxMatch[1].replace(/,/g, '')) : 0,
-      totalAmount: totalMatch ? parseFloat(totalMatch[1].replace(/,/g, '')) : subtotal,
-      lineItems: lineItems,
-      description: `Extracted from PDF on ${new Date().toISOString()}`
-    };
+    return parseInvoiceText(text, {
+      invoiceNumber: /invoice\s*#?\s*([A-Z0-9\-]+)/i,
+      date: /date\s*[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}[\/\-]\d{2}[\/\-]\d{4})/i,
+      vendor: /vendor\s*[:\s]+([^\n]+)/i,
+      gstin: /gstin?\s*[:\s]+([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}[Z]{1}[0-9A-Z]{1})/i,
+      total: /total[^\n]*?([\d,]+\.\d{2})\s*$/im,
+      tax: /tax\s*[:\s]*\$?([\d,\.]+)/i
+    });
   }
 
-  /**
-   * Parse line items from invoice text
-   */
-  private parseLineItems(text: string): LineItem[] {
-    const lineItems: LineItem[] = [];
 
-    // Basic pattern: number. product - qty: X @ price = amount
-    const itemPattern = /\d+\.\s*([^\-]+)\s*-\s*qty\s*[:\s]*(\d+)\s*@\s*\$?([\d\.]+)\s*=\s*\$?([\d\.]+)/gi;
-
-    let match;
-    while ((match = itemPattern.exec(text)) !== null) {
-      lineItems.push({
-        description: match[1].trim(),
-        quantity: parseInt(match[2]),
-        unitPrice: parseFloat(match[3]),
-        amount: parseFloat(match[4]),
-        taxRate: 0
-      });
-    }
-
-    return lineItems;
-  }
 }

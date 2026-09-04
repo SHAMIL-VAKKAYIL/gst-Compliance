@@ -1,51 +1,31 @@
 
 import { ExtractedInvoiceData } from './invoices.types';
+import { prisma } from '../../prisma/client';
 
 export class InvoiceRepository {
-  /**
-   * Save extracted invoice data to database
-   * @param invoiceData - Extracted invoice information
-   * @param extractionStatus - Status: COMPLETE, FAILED, NEEDS_CORRECTION
-   * @param failureReason - Reason for failure: UNREADABLE_SCAN, MISSING_REQUIRED_FIELDS, CORRUPTED_FILE
-   * @returns Created invoice record with ID
-   */
+
   async saveExtractedInvoice(
     invoiceData: ExtractedInvoiceData,
-    extractionStatus: string = 'COMPLETE',
-    failureReason: string | null = null
+    extractionStatus: 'COMPLETE' | 'NEEDS_CORRECTION' | 'FAILED' = 'COMPLETE',
   ): Promise<any> {
     try {
-      // TODO: Use Prisma to save to database
-      // Example:
-      // const invoice = await prisma.invoice.create({
-      //   data: {
-      //     invoiceNumber: invoiceData.invoiceNumber,
-      //     vendorName: invoiceData.vendorName,
-      //     vendorGSTIN: invoiceData.vendorGSTIN,
-      //     invoiceDate: new Date(invoiceData.invoiceDate),
-      //     amount: invoiceData.totalAmount,
-      //     tax: invoiceData.tax,
-      //     extractionStatus: extractionStatus,
-      //     failureReason: failureReason,
-      //     lineItems: {
-      //       create: invoiceData.lineItems.map(item => ({
-      //         description: item.description,
-      //         quantity: item.quantity,
-      //         unitPrice: item.unitPrice
-      //       }))
-      //     }
-      //   }
-      // });
-      console.log('Saving invoice data to database:', {
-        ...invoiceData,
-        extractionStatus,
-        failureReason
+
+      const invoice = await prisma.invoice.create({
+        data: {
+          userId: 'user-id-placeholder', // Replace with actual user ID if available
+          gstin: invoiceData.gstin,
+          invoiceNumber: invoiceData.invoiceNumber,
+          invoiceDate: new Date(invoiceData.invoiceDate || ''),
+          vendorName: invoiceData.vendorName,
+          amount: invoiceData.totalAmount,
+          extractionStatus: extractionStatus,
+          summaryStatus: 'PENDING',
+        }
       });
-      return { 
-        id: 'generated-id', 
+      return {
+        id: 'generated-id',
         ...invoiceData,
         extractionStatus,
-        failureReason
       };
     } catch (error) {
       throw new Error(`Failed to save invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -59,7 +39,7 @@ export class InvoiceRepository {
    */
   async getInvoiceById(invoiceId: string): Promise<any> {
     try {
-      // TODO: Fetch from database using Prisma
+
       console.log(`Fetching invoice with ID: ${invoiceId}`);
       return null;
     } catch (error) {
@@ -67,13 +47,9 @@ export class InvoiceRepository {
     }
   }
 
-  /**
-   * Update invoice extraction confidence or validation status
-   * @param invoiceId - Invoice ID
-   * @param updateData - Data to update
-   * @returns Updated invoice
-   */
+
   async updateInvoice(invoiceId: string, updateData: Partial<ExtractedInvoiceData>): Promise<any> {
+    // update only for amount
     try {
       console.log(`Updating invoice ${invoiceId}:`, updateData);
       return { id: invoiceId, ...updateData };

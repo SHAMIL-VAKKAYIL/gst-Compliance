@@ -3,6 +3,7 @@ import multer from 'multer';
 import { ExtractionController } from './invoices.controller';
 import { ExtractionService } from './extraction.service';
 import { InvoiceRepository } from './invoices.repository';
+import { LLMExtractionService } from '../llm-module/llm.service';
 
 const router: Router = express.Router();
 
@@ -39,7 +40,8 @@ const upload = multer({
 
 // Initialize dependencies
 const invoiceRepository = new InvoiceRepository();
-const extractionSvc = new ExtractionService(invoiceRepository);
+const llmExtractionService = new LLMExtractionService();
+const extractionSvc = new ExtractionService(invoiceRepository, llmExtractionService);
 const extractionCtrl = new ExtractionController(extractionSvc);
 
 // Routes

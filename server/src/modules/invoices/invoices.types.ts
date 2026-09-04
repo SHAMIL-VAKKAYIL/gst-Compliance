@@ -2,13 +2,14 @@
 export interface ExtractedInvoiceData {
   invoiceNumber: string;
   vendorName: string;
-  vendorGSTIN: string;
-  invoiceDate: string;
+  gstin: string;
+  invoiceDate: string | null;
   invoiceAmount: number;
   tax: number;
   totalAmount: number;
-  lineItems: LineItem[];
-  description?: string;
+  extractionStatus?: 'COMPLETE' | 'NEEDS_CORRECTION' | 'FAILED' | null;
+  // failureReason: '  CORRUPTED_FILE' | 'UNREADABLE_SCAN' | 'MISSING_REQUIRED_FIELDS'| null;
+
 }
 
 export interface LineItem {
@@ -31,6 +32,9 @@ export interface ValidationMetrics {
 export interface ExtractionResult {
   success: boolean;
   data?: ExtractedInvoiceData;
+  rawText?: string; // Raw extracted text from PDF or OCR
+  extractionStatus?: 'COMPLETE' | 'FAILED' | 'NEEDS_CORRECTION' | null;
+  failureReason?: string | null;
   error?: string;
   confidence?: number; // For OCR accuracy
   validationResults?: ValidationMetrics; // Field validation results

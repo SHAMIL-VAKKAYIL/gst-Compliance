@@ -3,221 +3,181 @@ import { PDFParser } from './pdf-parser/pdf-parser';
 import { OCRParser } from './ocr-parser/ocr-parser';
 import { ExtractionResult, ExtractedInvoiceData } from './invoices.types';
 import { FileTypeDetector } from '../../shared/utils/file-type-detector';
+import { LLMExtractionService } from '../llm-module/llm.service';
 
 interface ValidationResult {
-  invoiceNumberValid: boolean;
-  dateValid: boolean;
-  vendorValid: boolean;
-  gstnValid: boolean;
-  totalValid: boolean;
-  validFieldCount: number;
+    invoiceNumberValid: boolean;
+    dateValid: boolean;
+    vendorValid: boolean;
+    gstnValid: boolean;
+    totalValid: boolean;
+    validFieldCount: number;
 }
 
 export class ExtractionService {
     private pdfParser: PDFParser;
     private ocrParser: OCRParser;
 
-    constructor(private invoiceRepository: InvoiceRepository) {
+    constructor(
+        private invoiceRepository: InvoiceRepository,
+        private llmExtractionService: LLMExtractionService
+    ) {
         this.pdfParser = new PDFParser();
         this.ocrParser = new OCRParser();
     }
 
-    /**
-     * Validate extracted invoice data fields
-     * Returns which fields are valid based on format validation
-     */
     private validateExtractedData(data: ExtractedInvoiceData): ValidationResult {
-      const validation: ValidationResult = {
-        invoiceNumberValid: false,
-        dateValid: false,
-        vendorValid: false,
-        gstnValid: false,
-        totalValid: false,
-        validFieldCount: 0
-      };
+        const validation: ValidationResult = {
+            invoiceNumberValid: false,
+            dateValid: false,
+            vendorValid: false,
+            gstnValid: false,
+            totalValid: false,
+            validFieldCount: 0
+        };
 
-      // Validate invoice number (not UNKNOWN and alphanumeric)
-      if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && /^[A-Z0-9\-]{3,}$/i.test(data.invoiceNumber)) {
-        validation.invoiceNumberValid = true;
-      }
 
-      // Validate date (YYYY-MM-DD format and reasonable year)
-      if (data.invoiceDate && /^\d{4}-\d{2}-\d{2}$/.test(data.invoiceDate)) {
-        const year = parseInt(data.invoiceDate.split('-')[0]);
-        if (year >= 2015 && year <= new Date().getFullYear()) {
-          validation.dateValid = true;
+
+        if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && /^[A-Z0-9][A-Z0-9\- ]{1,}[A-Z0-9]$/i.test(data.invoiceNumber.trim())) {
+            validation.invoiceNumberValid = true;
         }
-      }
 
-      // Validate vendor name (not UNKNOWN and at least 3 chars)
-      if (data.vendorName && data.vendorName !== 'UNKNOWN' && data.vendorName.length >= 3) {
-        validation.vendorValid = true;
-      }
+        if (data.invoiceDate && /^\d{4}-\d{2}-\d{2}$/.test(data.invoiceDate)) {
+            const year = parseInt(data.invoiceDate.split('-')[0]);
+            if (year >= 2015 && year <= new Date().getFullYear()) {
+                validation.dateValid = true;
+            }
+        }
 
-      // Validate GSTIN (format: 2 digits + 5 letters + alphanumeric sequence)
-      if (data.vendorGSTIN && data.vendorGSTIN !== 'UNKNOWN' && /^[0-9]{2}[A-Z]{5}[0-9A-Z]{9,10}$/i.test(data.vendorGSTIN)) {
-        validation.gstnValid = true;
-      }
+        if (data.vendorName && data.vendorName !== 'UNKNOWN' && data.vendorName.length >= 3) {
+            validation.vendorValid = true;
+        }
 
-      // Validate total amount (positive number)
-      if (data.totalAmount && data.totalAmount > 0) {
-        validation.totalValid = true;
-      }
+        // if (data.gstin && data.gstin !== 'UNKNOWN' && /^[0-9]{2}[A-Z]{5}[0-9A-Z]{9,10}$/i.test(data.gstin)) {
+        //     validation.gstnValid = true;
+        // }
+        if (data.gstin && data.gstin !== 'UNKNOWN' && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(data.gstin)) {
+            validation.gstnValid = true;
+        }
 
-      // Count valid fields (GSTIN is critical, others contribute)
-      validation.validFieldCount = Object.entries(validation)
-        .filter(([key, value]) => key !== 'validFieldCount' && value === true)
-        .length;
+        if (data.totalAmount && data.totalAmount > 0) {
+            validation.totalValid = true;
+        }
 
-      return validation;
+        validation.validFieldCount = Object.entries(validation)
+            .filter(([key, value]) => key !== 'validFieldCount' && value === true)
+            .length;
+
+        return validation;
     }
 
-    /**
-     * Extract invoice data from uploaded file buffer
-     * Auto-detects file type from filename
-     * @param fileBuffer - File buffer from upload
-     * @param fileName - Original filename
-     * @returns Extraction result with saved invoice data
-     */
     async extractFromBuffer(fileBuffer: Buffer, fileName: string): Promise<ExtractionResult> {
         try {
-            // Auto-detect file type from filename
             const fileType = FileTypeDetector.detectFileType(fileName);
 
             if (fileType === 'unknown') {
                 return {
                     success: false,
+                    extractionStatus: 'FAILED',
                     error: `Unsupported file type. Supported formats: PDF, JPG, PNG, GIF, BMP, WEBP, TIFF`
                 };
             }
 
-            // Extract based on detected type
-            if (fileType === 'pdf') {
-                return this.extractPDFFromBuffer(fileBuffer, fileName);
-            } else {
-                return this.extractImageFromBuffer(fileBuffer, fileName);
+            const parser = fileType === 'pdf' ? this.pdfParser : this.ocrParser;
+            const initialResult = await parser.extractFromBuffer(fileBuffer);
+            console.log('sdfsdf', initialResult);
+
+            if (!initialResult.success || !initialResult.data) {
+                // Parser itself threw / couldn't open the file at all — this IS the corrupted_file case
+                return {
+                    success: false,
+                    extractionStatus: 'FAILED',
+                    failureReason: 'CORRUPTED_FILE',
+                    error: initialResult.error
+                };
             }
+
+            return this.processExtraction(initialResult);
         } catch (error) {
             return {
                 success: false,
+                extractionStatus: 'FAILED',
+                failureReason: 'CORRUPTED_FILE',
                 error: `Extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             };
         }
     }
 
-    /**
-     * Extract invoice data from PDF buffer and save to database
-     * @param fileBuffer - PDF file buffer
-     * @param fileName - Original filename
-     * @returns Extraction result with saved invoice data
-     */
-    private async extractPDFFromBuffer(fileBuffer: Buffer, fileName: string): Promise<ExtractionResult> {
-        try {
-            // Step 1: Parse PDF buffer
-            const extractionResult = await this.pdfParser.extractFromBuffer(fileBuffer);
-            
-            if (!extractionResult.success || !extractionResult.data) {
-                return extractionResult;
+    private async processExtraction(extractionResult: ExtractionResult): Promise<ExtractionResult> {
+        let validation = this.validateExtractedData(extractionResult.data!);
+
+        console.log(validation, 'validation');
+
+        // LLM fallback: only invoked if regex failed to nail GSTIN or amount specifically,
+        // not just because validFieldCount is low overall
+        if (!validation.gstnValid || !validation.totalValid) {
+            console.log('Invoking LLM fallback for extraction...');
+            const llmResult = await this.llmExtractionService.extractFields(extractionResult.rawText || '');
+            console.log(llmResult);
+
+            if (llmResult) {
+                // Merge: prefer regex values already valid, fill gaps with LLM output
+                const merged: ExtractedInvoiceData = {
+                    ...extractionResult.data!,
+                    gstin: validation.gstnValid ? extractionResult.data!.gstin : llmResult.gstin ?? extractionResult.data!.gstin,
+                    totalAmount: validation.totalValid ? extractionResult.data!.totalAmount : llmResult.amount !== null ? llmResult.amount : extractionResult.data!.totalAmount,
+                    invoiceDate: validation.dateValid ? extractionResult.data!.invoiceDate : llmResult.invoiceDate ?? extractionResult.data!.invoiceDate,
+                    vendorName: validation.vendorValid ? extractionResult.data!.vendorName : llmResult.vendorName ?? extractionResult.data!.vendorName,
+                    invoiceNumber: validation.invoiceNumberValid ? extractionResult.data!.invoiceNumber : llmResult.invoiceNumber ?? extractionResult.data!.invoiceNumber,
+                };
+                extractionResult.data = merged;
+                validation = this.validateExtractedData(merged); // re-run format validation on LLM's output too
+
             }
+        }
 
-            // Step 2: Validate extracted data
-            const validation = this.validateExtractedData(extractionResult.data);
-            
-            // Step 3: Determine extraction status and failure reason
-            let extractionStatus = 'COMPLETE';
-            let failureReason = null;
+        let extractionStatus: 'COMPLETE' | 'FAILED' | 'NEEDS_CORRECTION';
+        let failureReason: string | null = null;
+        let shouldSave = true;
+        console.log('final validation results:', validation);
 
-            if (validation.validFieldCount === 0) {
-                // Zero valid fields → unreadable/corrupted
-                extractionStatus = 'FAILED';
-                failureReason = 'CORRUPTED_FILE';
-            } else if (!validation.gstnValid && validation.validFieldCount < 3) {
-                // GSTIN missing or invalid AND other fields also missing
-                extractionStatus = 'FAILED';
-                failureReason = 'MISSING_REQUIRED_FIELDS';
-            } else if (validation.gstnValid && validation.validFieldCount < 3) {
-                // GSTIN present but other critical fields missing
-                extractionStatus = 'NEEDS_CORRECTION';
-                failureReason = 'MISSING_REQUIRED_FIELDS';
-            }
 
-            // Step 4: Save to database with status and failure reason
-            const savedInvoice = await this.invoiceRepository.saveExtractedInvoice(
-                extractionResult.data,
-                extractionStatus,
-                failureReason
-            );
-            
-            return {
-                success: extractionStatus === 'COMPLETE' ? true : false,
-                data: savedInvoice,
-                confidence: extractionResult.confidence,
-                validationResults: validation
-            };
-        } catch (error) {
+        if (validation.validFieldCount === 0) {
+            extractionStatus = 'FAILED';
+            failureReason = 'UNREADABLE_SCAN';
+            shouldSave = false;
+        } else if (!validation.gstnValid) {
+            extractionStatus = 'FAILED';
+            failureReason = 'MISSING_REQUIRED_FIELDS';
+            shouldSave = false;
+        } else if (!validation.totalValid) {
+            extractionStatus = 'NEEDS_CORRECTION';
+            shouldSave = true;
+        } else {
+            extractionStatus = 'COMPLETE';
+            shouldSave = true;
+        }
+
+        if (!shouldSave) {
             return {
                 success: false,
-                error: `PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-            };
-        }
-    }
-
-    /**
-     * Extract invoice data from image buffer and save to database
-     * @param fileBuffer - Image file buffer
-     * @param fileName - Original filename
-     * @returns Extraction result with saved invoice data
-     */
-    private async extractImageFromBuffer(fileBuffer: Buffer, fileName: string): Promise<ExtractionResult> {
-        try {
-            // Step 1: Parse image using OCR
-            const extractionResult = await this.ocrParser.extractFromBuffer(fileBuffer);
-            
-            if (!extractionResult.success || !extractionResult.data) {
-                return extractionResult;
-            }
-
-            // Step 2: Validate extracted data
-            const validation = this.validateExtractedData(extractionResult.data);
-            
-            // Step 3: Determine extraction status and failure reason
-            let extractionStatus = 'COMPLETE';
-            let failureReason = null;
-
-            if (validation.validFieldCount === 0) {
-                // Zero valid fields → unreadable scan
-                extractionStatus = 'FAILED';
-                failureReason = 'UNREADABLE_SCAN';
-            } else if (!validation.gstnValid && validation.validFieldCount < 3) {
-                // GSTIN missing or invalid AND other fields also missing
-                extractionStatus = 'FAILED';
-                failureReason = 'MISSING_REQUIRED_FIELDS';
-            } else if (validation.gstnValid && validation.validFieldCount < 3) {
-                // GSTIN present but other critical fields missing
-                extractionStatus = 'NEEDS_CORRECTION';
-                failureReason = 'MISSING_REQUIRED_FIELDS';
-            }
-
-            // Step 4: Save to database with status and failure reason
-
-
-            const savedInvoice = await this.invoiceRepository.saveExtractedInvoice(
-                extractionResult.data,
                 extractionStatus,
-                failureReason
-            );
-            
-            return {
-                success: extractionStatus === 'COMPLETE' ? true : false,
-                data: savedInvoice,
-                confidence: extractionResult.confidence,
-                validationResults: validation
-            };
-        } catch (error) {
-            return {
-                success: false,
-                error: `Image extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                failureReason,
+                error: `Extraction failed: ${failureReason}`
             };
         }
+
+        const savedInvoice = await this.invoiceRepository.saveExtractedInvoice(
+            extractionResult.data!,
+            extractionStatus,
+        );
+
+        return {
+            success: true,
+            extractionStatus: 'COMPLETE',
+            data: savedInvoice,
+            confidence: extractionResult.confidence,
+            validationResults: validation
+        };
     }
 }
