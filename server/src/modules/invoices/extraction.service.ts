@@ -14,6 +14,8 @@ interface ValidationResult {
     validFieldCount: number;
 }
 
+const MINIMUM_MEANINGFUL_LENGTH = 50;
+
 export class ExtractionService {
     private pdfParser: PDFParser;
     private ocrParser: OCRParser;
@@ -37,7 +39,6 @@ export class ExtractionService {
         };
 
 
-
         if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && /^[A-Z0-9][A-Z0-9\- ]{1,}[A-Z0-9]$/i.test(data.invoiceNumber.trim())) {
             validation.invoiceNumberValid = true;
         }
@@ -53,9 +54,6 @@ export class ExtractionService {
             validation.vendorValid = true;
         }
 
-        // if (data.gstin && data.gstin !== 'UNKNOWN' && /^[0-9]{2}[A-Z]{5}[0-9A-Z]{9,10}$/i.test(data.gstin)) {
-        //     validation.gstnValid = true;
-        // }
         if (data.gstin && data.gstin !== 'UNKNOWN' && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(data.gstin)) {
             validation.gstnValid = true;
         }
@@ -84,8 +82,27 @@ export class ExtractionService {
             }
 
             const parser = fileType === 'pdf' ? this.pdfParser : this.ocrParser;
-            const initialResult = await parser.extractFromBuffer(fileBuffer);
+            let initialResult = await parser.extractFromBuffer(fileBuffer);
             console.log('sdfsdf', initialResult);
+
+            if (
+                fileType === 'pdf' &&
+                (!initialResult.rawText || initialResult.rawText.trim().length < MINIMUM_MEANINGFUL_LENGTH)
+            ) {
+                console.log('fallaback');
+                return {
+                    success: false,
+                    extractionStatus: 'FAILED',
+                    failureReason: 'UNREADABLE_SCAN',
+                    error: 'This PDF appears to be a scanned document with no extractable text. Please upload it as a photo (JPG or PNG) instead.'
+                };
+                // const fallbackResult = await this.extractViaOCRFallback(fileBuffer);
+                // if (!fallbackResult.success || !fallbackResult.data) {
+                //     return fallbackResult;
+                // }
+
+                // initialResult = fallbackResult;
+            }
 
             if (!initialResult.success || !initialResult.data) {
                 // Parser itself threw / couldn't open the file at all — this IS the corrupted_file case
@@ -99,6 +116,7 @@ export class ExtractionService {
 
             return this.processExtraction(initialResult);
         } catch (error) {
+            console.error('[ExtractionService] OCR fallback failed:', error);
             return {
                 success: false,
                 extractionStatus: 'FAILED',
@@ -114,14 +132,14 @@ export class ExtractionService {
         console.log(validation, 'validation');
 
         // LLM fallback: only invoked if regex failed to nail GSTIN or amount specifically,
-        // not just because validFieldCount is low overall
+
         if (!validation.gstnValid || !validation.totalValid) {
-            console.log('Invoking LLM fallback for extraction...');
+
             const llmResult = await this.llmExtractionService.extractFields(extractionResult.rawText || '');
-            console.log(llmResult);
+
 
             if (llmResult) {
-                // Merge: prefer regex values already valid, fill gaps with LLM output
+
                 const merged: ExtractedInvoiceData = {
                     ...extractionResult.data!,
                     gstin: validation.gstnValid ? extractionResult.data!.gstin : llmResult.gstin ?? extractionResult.data!.gstin,
@@ -131,14 +149,17 @@ export class ExtractionService {
                     invoiceNumber: validation.invoiceNumberValid ? extractionResult.data!.invoiceNumber : llmResult.invoiceNumber ?? extractionResult.data!.invoiceNumber,
                 };
                 extractionResult.data = merged;
-                validation = this.validateExtractedData(merged); // re-run format validation on LLM's output too
+                validation = this.validateExtractedData(merged); 
 
             }
         }
 
         let extractionStatus: 'COMPLETE' | 'FAILED' | 'NEEDS_CORRECTION';
+
         let failureReason: string | null = null;
+
         let shouldSave = true;
+
         console.log('final validation results:', validation);
 
 

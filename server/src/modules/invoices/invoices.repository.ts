@@ -32,11 +32,8 @@ export class InvoiceRepository {
     }
   }
 
-  /**
-   * Retrieve invoice by ID
-   * @param invoiceId - Invoice ID
-   * @returns Invoice data
-   */
+  //! Retrieve invoice by ID
+
   async getInvoiceById(invoiceId: string): Promise<any> {
     try {
 

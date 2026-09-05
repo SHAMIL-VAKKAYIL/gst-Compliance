@@ -9,23 +9,27 @@ export class OCRParser {
    * @returns Extracted invoice data
    */
   async extractFromBuffer(fileBuffer: Buffer): Promise<ExtractionResult> {
+    return this.extractFromBuffers([fileBuffer]);
+  }
+
+  async extractFromBuffers(fileBuffers: Buffer[]): Promise<ExtractionResult> {
     try {
-      if (!fileBuffer || fileBuffer.length === 0) {
+      if (fileBuffers.length === 0 || fileBuffers.some((fileBuffer) => !fileBuffer?.length)) {
         return {
           success: false,
           error: 'Empty image file buffer'
         };
       }
 
-      console.log(`[OCRParser] Processing image buffer (${fileBuffer.length} bytes)`);
+      const extractedPages = await Promise.all(
+        fileBuffers.map((fileBuffer) => this.extractTextFromImage(fileBuffer))
+      );
+      const extractedText = extractedPages.join('\n');
+      console.log(extractedText,'sdfsgdsgdg');
+      
 
-      // Extract text from image buffer using OCR
-      const extractedText = await this.extractTextFromImage(fileBuffer);
+      console.log(`[OCRParser] Processed ${fileBuffers.length} image(s)`);
 
-      console.log(extractedText);
-
-
-      // Parse extracted text to invoice data
       const invoiceData = this.parseOCRText(extractedText);
 
       return {
@@ -56,6 +60,8 @@ export class OCRParser {
         'eng', // English language
         { logger: (m: any) => console.log('[Tesseract]', m) }
       );
+
+      console.log(`[OCRParser] Extracted text length: ${text.length}`,text);
 
       return text;
     } catch (error) {
