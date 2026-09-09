@@ -48,12 +48,25 @@ CREATE TABLE "Invoice" (
     "vendorName" TEXT,
     "amount" DECIMAL(12,2),
     "extractionStatus" "ExtractionStatus" NOT NULL,
-    "failureReason" "FailureReason",
     "summaryStatus" "SummaryStatus" NOT NULL DEFAULT 'PENDING',
     "summary" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Invoice_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LineItem" (
+    "id" TEXT NOT NULL,
+    "invoiceId" TEXT NOT NULL,
+    "description" TEXT,
+    "quantity" DECIMAL(10,2),
+    "unitPrice" DECIMAL(12,2),
+    "taxRate" DECIMAL(5,2),
+    "lineAmount" DECIMAL(12,2),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "LineItem_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -83,6 +96,9 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 CREATE INDEX "Invoice_userId_extractionStatus_idx" ON "Invoice"("userId", "extractionStatus");
 
 -- CreateIndex
+CREATE INDEX "LineItem_invoiceId_idx" ON "LineItem"("invoiceId");
+
+-- CreateIndex
 CREATE INDEX "ValidationResult_invoiceId_runAt_idx" ON "ValidationResult"("invoiceId", "runAt");
 
 -- AddForeignKey
@@ -90,6 +106,9 @@ ALTER TABLE "VerificationToken" ADD CONSTRAINT "VerificationToken_userId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "Invoice" ADD CONSTRAINT "Invoice_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LineItem" ADD CONSTRAINT "LineItem_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ValidationResult" ADD CONSTRAINT "ValidationResult_invoiceId_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;
