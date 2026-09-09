@@ -12,7 +12,7 @@ export class InvoiceRepository {
 
       const invoice = await prisma.invoice.create({
         data: {
-          userId: 'user-id-placeholder', // Replace with actual user ID if available
+          userId: '3e2d3ewek3owe3e3rdrd', // Replace with actual user ID if available
           gstin: invoiceData.gstin,
           invoiceNumber: invoiceData.invoiceNumber,
           invoiceDate: new Date(invoiceData.invoiceDate || ''),

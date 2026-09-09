@@ -8,16 +8,22 @@ export interface ExtractedInvoiceData {
   tax: number;
   totalAmount: number;
   extractionStatus?: 'COMPLETE' | 'NEEDS_CORRECTION' | 'FAILED' | null;
+  lineItems: LineItem[];
   // failureReason: '  CORRUPTED_FILE' | 'UNREADABLE_SCAN' | 'MISSING_REQUIRED_FIELDS'| null;
 
 }
 
 export interface LineItem {
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  amount: number;
-  taxRate?: number;
+  description: string | null;
+  hsnCode: string | null;
+  quantity: number | null;
+  unitPrice: number | null;
+  taxableValue: number | null;
+  taxRate: number | null;
+  igstAmount: number | null;
+  cgstAmount: number | null;
+  sgstAmount: number | null;
+  lineTotal: number | null;
 }
 
 export interface ValidationMetrics {
@@ -38,4 +44,5 @@ export interface ExtractionResult {
   error?: string;
   confidence?: number; // For OCR accuracy
   validationResults?: ValidationMetrics; // Field validation results
+  lineItems?: LineItem[]; // Optional: extracted line items
 }

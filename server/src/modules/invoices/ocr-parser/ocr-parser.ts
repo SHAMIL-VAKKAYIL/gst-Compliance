@@ -1,5 +1,4 @@
-import { ExtractionResult, ExtractedInvoiceData } from '../invoices.types';
-import { parseInvoiceText } from '../../../shared/utils/invoice-parser.utils';
+import { ExtractionResult } from '../invoices.types';
 import Tesseract from 'tesseract.js';
 
 export class OCRParser {
@@ -30,12 +29,9 @@ export class OCRParser {
 
       console.log(`[OCRParser] Processed ${fileBuffers.length} image(s)`);
 
-      const invoiceData = this.parseOCRText(extractedText);
-
       return {
         success: true,
         rawText: extractedText,
-        data: invoiceData,
         confidence: 0.85 // OCR typically has lower confidence than PDF extraction
       };
     } catch (error) {
@@ -71,18 +67,4 @@ export class OCRParser {
     }
   }
 
-  /**
-   * Parse OCR extracted text to structured invoice data
-   * Handles variations in OCR output formatting
-   */
-  private parseOCRText(text: string): ExtractedInvoiceData {
-    return parseInvoiceText(text, {
-      invoiceNumber: /invoice\s*(?:number|#|num)?\s*[:\s]*([A-Z0-9\-]+)/i,
-      date: /date\s*[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/i,
-      vendor: /(?:bill\s*from|vendor|company)\s*[:\s]*([^\n]+)/i,
-      gstin: /gstin\s*[:\s]+([0-9A-Z]+)/i,
-      total: /total\s*[:\s]*(?:rs\.?|₹)?\s*([\d,\.]+)/i,
-      tax: /(?:tax|gst)\s*(?:\d+%)?\s*[:\s]*(?:rs\.?|₹)?\s*([\d,\.]+)/i
-    });
-  }
 }

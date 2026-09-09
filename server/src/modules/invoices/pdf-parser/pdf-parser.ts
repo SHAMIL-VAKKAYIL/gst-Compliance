@@ -1,6 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { ExtractionResult, ExtractedInvoiceData } from '../invoices.types';
-import { parseInvoiceText } from '../../../shared/utils/invoice-parser.utils';
+import { ExtractionResult } from '../invoices.types';
 import { PDFParse } from 'pdf-parse';
 
 export class PDFParser {
@@ -22,12 +21,10 @@ export class PDFParser {
 
       const rawText = await this.extractPDFText(fileBuffer);
 
-      const invoiceData = this.parsePDFText(rawText);
-
+      console.log(rawText,'sdfsgdsgdg');
       return {
         success: true,
         rawText: rawText,
-        data: invoiceData,
         confidence: 0.95 // PDF extraction usually has high confidence
       };
     } catch (error) {
@@ -61,20 +58,5 @@ export class PDFParser {
       return ``;
     }
   }
-
-  /**
-   * Parse extracted PDF text to structured invoice data
-   */
-  private parsePDFText(text: string): ExtractedInvoiceData {
-    return parseInvoiceText(text, {
-      invoiceNumber: /invoice\s*#?\s*([A-Z0-9\-]+)/i,
-      date: /date\s*[:\s]+(\d{4}-\d{2}-\d{2}|\d{2}[\/\-]\d{2}[\/\-]\d{4})/i,
-      vendor: /vendor\s*[:\s]+([^\n]+)/i,
-      gstin: /gstin?\s*[:\s]+([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}[Z]{1}[0-9A-Z]{1})/i,
-      total: /total[^\n]*?([\d,]+\.\d{2})\s*$/im,
-      tax: /tax\s*[:\s]*\$?([\d,\.]+)/i
-    });
-  }
-
 
 }

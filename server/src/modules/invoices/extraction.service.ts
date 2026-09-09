@@ -39,12 +39,13 @@ export class ExtractionService {
         };
 
 
-        if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && /^[A-Z0-9][A-Z0-9\- ]{1,}[A-Z0-9]$/i.test(data.invoiceNumber.trim())) {
+        if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && data.invoiceNumber.trim().length >= 3) {
             validation.invoiceNumberValid = true;
         }
 
-        if (data.invoiceDate && /^\d{4}-\d{2}-\d{2}$/.test(data.invoiceDate)) {
-            const year = parseInt(data.invoiceDate.split('-')[0]);
+        if (data.invoiceDate) {
+            const dateParts = data.invoiceDate.split('-');
+            const year = Number(dateParts[0]);
             if (year >= 2015 && year <= new Date().getFullYear()) {
                 validation.dateValid = true;
             }
@@ -54,7 +55,7 @@ export class ExtractionService {
             validation.vendorValid = true;
         }
 
-        if (data.gstin && data.gstin !== 'UNKNOWN' && /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(data.gstin)) {
+        if (data.gstin && data.gstin !== 'UNKNOWN' && data.gstin.trim().length === 15) {
             validation.gstnValid = true;
         }
 
@@ -82,8 +83,7 @@ export class ExtractionService {
             }
 
             const parser = fileType === 'pdf' ? this.pdfParser : this.ocrParser;
-            let initialResult = await parser.extractFromBuffer(fileBuffer);
-            console.log('sdfsdf', initialResult);
+            const initialResult = await parser.extractFromBuffer(fileBuffer);
 
             if (
                 fileType === 'pdf' &&
@@ -104,7 +104,7 @@ export class ExtractionService {
                 // initialResult = fallbackResult;
             }
 
-            if (!initialResult.success || !initialResult.data) {
+            if (!initialResult.success) {
                 // Parser itself threw / couldn't open the file at all — this IS the corrupted_file case
                 return {
                     success: false,
@@ -127,32 +127,29 @@ export class ExtractionService {
     }
 
     private async processExtraction(extractionResult: ExtractionResult): Promise<ExtractionResult> {
-        let validation = this.validateExtractedData(extractionResult.data!);
+        const llmResult = await this.llmExtractionService.extractAll(extractionResult.rawText || '');
 
-        console.log(validation, 'validation');
-
-        // LLM fallback: only invoked if regex failed to nail GSTIN or amount specifically,
-
-        if (!validation.gstnValid || !validation.totalValid) {
-
-            const llmResult = await this.llmExtractionService.extractFields(extractionResult.rawText || '');
-
-
-            if (llmResult) {
-
-                const merged: ExtractedInvoiceData = {
-                    ...extractionResult.data!,
-                    gstin: validation.gstnValid ? extractionResult.data!.gstin : llmResult.gstin ?? extractionResult.data!.gstin,
-                    totalAmount: validation.totalValid ? extractionResult.data!.totalAmount : llmResult.amount !== null ? llmResult.amount : extractionResult.data!.totalAmount,
-                    invoiceDate: validation.dateValid ? extractionResult.data!.invoiceDate : llmResult.invoiceDate ?? extractionResult.data!.invoiceDate,
-                    vendorName: validation.vendorValid ? extractionResult.data!.vendorName : llmResult.vendorName ?? extractionResult.data!.vendorName,
-                    invoiceNumber: validation.invoiceNumberValid ? extractionResult.data!.invoiceNumber : llmResult.invoiceNumber ?? extractionResult.data!.invoiceNumber,
-                };
-                extractionResult.data = merged;
-                validation = this.validateExtractedData(merged); 
-
-            }
+        if (!llmResult) {
+            return {
+                success: false,
+                extractionStatus: 'FAILED',
+                failureReason: 'UNREADABLE_SCAN',
+                error: 'Unable to extract invoice data from the document'
+            };
         }
+
+        const extractedData: ExtractedInvoiceData = {
+            invoiceNumber: llmResult.invoiceNumber ?? 'UNKNOWN',
+            vendorName: llmResult.vendorName ?? 'UNKNOWN',
+            gstin: llmResult.gstin ?? 'UNKNOWN',
+            invoiceDate: llmResult.invoiceDate,
+            invoiceAmount: llmResult.amount ?? 0,
+            tax: 0,
+            totalAmount: llmResult.amount ?? 0,
+            lineItems: llmResult.lineItems
+        };
+        const validation = this.validateExtractedData(extractedData);
+        extractionResult.data = extractedData;
 
         let extractionStatus: 'COMPLETE' | 'FAILED' | 'NEEDS_CORRECTION';
 
@@ -160,7 +157,7 @@ export class ExtractionService {
 
         let shouldSave = true;
 
-        console.log('final validation results:', validation);
+        // console.log('final validation results:', validation);
 
 
         if (validation.validFieldCount === 0) {
