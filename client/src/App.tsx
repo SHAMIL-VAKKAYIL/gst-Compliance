@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
+import { ProtectedRoute } from './auth/ProtectedRoute'
 import { AppShell } from './components/layout/AppShell'
 import { DashboardPage } from './pages/DashboardPage'
 import { UploadPage } from './pages/UploadPage'
@@ -17,11 +18,11 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
-          <Route path="/invoices" element={<InvoicesPage />} />
-          <Route path="/invoices/upload" element={<UploadPage />} />
-          <Route path="/invoices/:id" element={<ReviewPage />} />
+          <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
+          <Route path="/invoices/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
+          <Route path="/invoices/:id" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </AuthProvider>
   )

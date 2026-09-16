@@ -1,21 +1,24 @@
 
 import { ExtractedInvoiceData } from './invoices.types';
 import { prisma } from '../../prisma/client';
+import { AppError } from '../../shared/errors/app-error';
 
 export class InvoiceRepository {
 
   async saveExtractedInvoice(
     invoiceData: ExtractedInvoiceData,
+    userId: string,
     extractionStatus: 'COMPLETE' | 'NEEDS_CORRECTION' | 'FAILED' = 'COMPLETE',
   ): Promise<any> {
     try {
+      console.log(userId, '3432423');
 
       const invoice = await prisma.invoice.create({
         data: {
-          userId: '3e2d3ewek3owe3e3rdrd', // Replace with actual user ID if available
+          userId,
           gstin: invoiceData.gstin,
           invoiceNumber: invoiceData.invoiceNumber,
-          invoiceDate: new Date(invoiceData.invoiceDate || ''),
+          invoiceDate: invoiceData.invoiceDate ? new Date(invoiceData.invoiceDate) : null,
           vendorName: invoiceData.vendorName,
           amount: invoiceData.totalAmount,
           extractionStatus: extractionStatus,
@@ -23,24 +26,42 @@ export class InvoiceRepository {
         }
       });
       return {
-        id: 'generated-id',
+        id: invoice.id,
         ...invoiceData,
         extractionStatus,
       };
     } catch (error) {
-      throw new Error(`Failed to save invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new AppError(`Failed to save invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  //! Retrieve invoice by ID
+  // ! Retrieve invoice by ID
 
-  async getInvoiceById(invoiceId: string): Promise<any> {
+  async getInvoiceById(invoiceId: string, userId: string): Promise<any> {
     try {
-
-      console.log(`Fetching invoice with ID: ${invoiceId}`);
-      return null;
+      return await prisma.invoice.findFirst({
+        where: {
+          id: invoiceId,
+          userId,
+        },
+        include: {
+          lineItems: true,
+          validationResults: {
+            orderBy: { runAt: 'desc' },
+          },
+        },
+      });
     } catch (error) {
-      throw new Error(`Failed to retrieve invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new AppError(`Failed to retrieve invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getInvoices(userId: string) {
+    try {
+      return await prisma.invoice.findMany({where :{userId:userId}})
+    } catch (error) {
+      throw new AppError(`Failed to retrieve invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
     }
   }
 
@@ -51,7 +72,7 @@ export class InvoiceRepository {
       console.log(`Updating invoice ${invoiceId}:`, updateData);
       return { id: invoiceId, ...updateData };
     } catch (error) {
-      throw new Error(`Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new AppError(`Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

@@ -12,7 +12,7 @@ export async function validateInvoice(
     lineItems?: ExtractedInvoiceData['lineItems']
   },
 ): Promise<ValidationResponse> {
-  return apiFetch<ValidationResponse>(`/api/invoice/v1/validate/${encodeURIComponent(invoiceId)}`, {
+  return apiFetch<ValidationResponse>(`/api/validation/v1/validate/${encodeURIComponent(invoiceId)}`, {
     method: 'POST',
     data: invoice,
   })

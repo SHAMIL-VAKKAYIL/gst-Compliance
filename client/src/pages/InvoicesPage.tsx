@@ -1,9 +1,29 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { listInvoices } from '../lib/invoiceStore'
+import { invoices as fetchInvoicesApi } from '../api/invoices'
 
 export function InvoicesPage() {
-  const invoices = useMemo(() => listInvoices(), [])
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadInvoices() {
+      try {
+        const response: any = await fetchInvoicesApi()
+        if (response && response.success && response.data) {
+          setInvoices(response.data)
+        } else if (Array.isArray(response)) {
+          setInvoices(response)
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load invoices')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadInvoices()
+  }, [])
 
   return (
     <div className="page">
@@ -11,7 +31,7 @@ export function InvoicesPage() {
         <div>
           <h1>Invoices</h1>
           <p className="muted">
-            Local session list only — a server GET endpoint for invoices is not available yet.
+            All your processed invoices
           </p>
         </div>
         <Link to="/invoices/upload" className="btn btn-primary">
@@ -20,8 +40,12 @@ export function InvoicesPage() {
       </header>
 
       <section className="panel">
-        {invoices.length === 0 ? (
-          <p className="muted">No invoices in this browser session.</p>
+        {loading ? (
+          <p className="muted">Loading invoices...</p>
+        ) : error ? (
+          <p className="error" style={{ color: 'red' }}>{error}</p>
+        ) : invoices.length === 0 ? (
+          <p className="muted">No invoices found.</p>
         ) : (
           <div className="table-scroll">
             <table className="data-table">
@@ -36,22 +60,33 @@ export function InvoicesPage() {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.localId}>
-                    <td>{inv.data.invoiceNumber || '—'}</td>
-                    <td>{inv.data.vendorName || '—'}</td>
-                    <td>{inv.data.gstin || '—'}</td>
-                    <td>
-                      <span className={`badge status-${inv.extractionStatus ?? 'UNKNOWN'}`}>
-                        {inv.extractionStatus ?? 'UNKNOWN'}
-                      </span>
-                    </td>
-                    <td>{new Date(inv.uploadedAt).toLocaleString()}</td>
-                    <td>
-                      <Link to={`/invoices/${inv.localId}`}>Review</Link>
-                    </td>
-                  </tr>
-                ))}
+                {invoices.map((inv) => {
+                  // Handle both nested .data and flat objects depending on API response
+                  const invoiceNumber = inv.data?.invoiceNumber || inv.invoiceNumber || '—'
+                  const vendorName = inv.data?.vendorName || inv.vendorName || '—'
+                  const gstin = inv.data?.gstin || inv.gstin || '—'
+                  const status = inv.extractionStatus || 'UNKNOWN'
+                  const dateStr = inv.uploadedAt || inv.createdAt || inv.invoiceDate
+                  const displayDate = dateStr ? new Date(dateStr).toLocaleString() : '—'
+                  const id = inv.id || inv.localId
+
+                  return (
+                    <tr key={id}>
+                      <td>{invoiceNumber}</td>
+                      <td>{vendorName}</td>
+                      <td>{gstin}</td>
+                      <td>
+                        <span className={`badge status-${status}`}>
+                          {status}
+                        </span>
+                      </td>
+                      <td>{displayDate}</td>
+                      <td>
+                        <Link to={`/invoices/${id}`}>Review</Link>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

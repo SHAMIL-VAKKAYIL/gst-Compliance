@@ -1,8 +1,48 @@
 import { ExtractionService } from "./extraction.service";
+import { InvoiceService } from "./invoices.service";
 import { ExtractionResult } from './invoices.types';
 
 export class InvoicesController {
     // General invoice operations
+    constructor(
+        private extractionService: ExtractionService,
+        private invoiceService: InvoiceService
+    ) { }
+
+    async fetchInvoiceById(req: any, res: any, next: any) {
+        try {
+            const invoiceId = req.params.invoiceId;
+            const userId = req.user?.userId;
+
+            if (!userId) {
+                return res.status(401).json({ success: false, error: 'Authentication required' });
+            }
+
+            const invoice = await this.invoiceService.fetchInvoiceById(invoiceId, userId);
+
+            if (!invoice) {
+                return res.status(404).json({ success: false, error: 'Invoice not found' });
+            }
+            return res.status(200).json({ success: true, data: invoice });
+        } catch (error) {
+            next(error); // Pass the error to the next middleware (error handler)
+        }
+    }
+    async fetchInvoices(req: any, res: any, next: any) {
+        try {
+            const userId = req.user?.userId
+            if (!userId) {
+                return res.status(401).json({ success: false, error: 'Authentication required' });
+            }
+            const invoice = await this.invoiceService.fetchInvoices(userId);
+
+            return res.status(200).json({ success: true, data: invoice });
+
+        } catch (error) {
+            next(error)
+        }
+
+    }
 }
 
 export class ExtractionController {
@@ -16,8 +56,12 @@ export class ExtractionController {
      * Content-Type: multipart/form-data
      * Body: { file: File }
      */
-    async extractInvoiceData(req: any, res: any) {
+    async extractInvoiceData(req: any, res: any, next: any) {
         try {
+            if (!req.user?.userId) {
+                return res.status(401).json({ success: false, error: 'Authentication required' });
+            }
+
             // Check if file is uploaded
             if (!req.file) {
                 return res.status(400).json({
@@ -33,7 +77,8 @@ export class ExtractionController {
             // Call service to extract data from buffer
             const result: ExtractionResult = await this.extractionService.extractFromBuffer(
                 fileBuffer,
-                fileName
+                fileName,
+                req.user.userId
             );
 
             if (!result.success) {
@@ -42,10 +87,7 @@ export class ExtractionController {
 
             return res.status(200).json(result);
         } catch (error) {
-            return res.status(500).json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Internal server error'
-            });
+            next(error); // Pass the error to the next middleware (error handler)
         }
     }
 }

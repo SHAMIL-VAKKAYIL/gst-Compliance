@@ -2,7 +2,6 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import type { ReactNode } from 'react'
 
-/** Soft gate: invoice flows work without auth today; use for account-only routes. */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const location = useLocation()

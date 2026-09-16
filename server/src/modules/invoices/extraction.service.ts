@@ -70,7 +70,7 @@ export class ExtractionService {
         return validation;
     }
 
-    async extractFromBuffer(fileBuffer: Buffer, fileName: string): Promise<ExtractionResult> {
+    async extractFromBuffer(fileBuffer: Buffer, fileName: string, userId: string): Promise<ExtractionResult> {
         try {
             const fileType = FileTypeDetector.detectFileType(fileName);
 
@@ -114,7 +114,7 @@ export class ExtractionService {
                 };
             }
 
-            return this.processExtraction(initialResult);
+            return this.processExtraction(initialResult, userId);
         } catch (error) {
             console.error('[ExtractionService] OCR fallback failed:', error);
             return {
@@ -126,7 +126,7 @@ export class ExtractionService {
         }
     }
 
-    private async processExtraction(extractionResult: ExtractionResult): Promise<ExtractionResult> {
+    private async processExtraction(extractionResult: ExtractionResult, userId?: string): Promise<ExtractionResult> {
         const llmResult = await this.llmExtractionService.extractAll(extractionResult.rawText || '');
 
         if (!llmResult) {
@@ -187,6 +187,7 @@ export class ExtractionService {
 
         const savedInvoice = await this.invoiceRepository.saveExtractedInvoice(
             extractionResult.data!,
+            userId ?? 'unknown-user',
             extractionStatus,
         );
 
@@ -199,3 +200,4 @@ export class ExtractionService {
         };
     }
 }
+

@@ -10,3 +10,10 @@ export async function extractInvoice(file: File): Promise<ExtractionResult> {
     data: form,
   })
 }
+
+export async function invoices() {
+  return apiFetch('/api/invoice/v1/invoices')
+}
+export async function invoiceById(InvoiceId:string) {
+  return apiFetch(`/api/invoice/v1/${InvoiceId}`)
+}

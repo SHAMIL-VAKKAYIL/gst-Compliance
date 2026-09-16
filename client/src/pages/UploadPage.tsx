@@ -63,7 +63,7 @@ export function UploadPage() {
         <div>
           <h1>Upload invoice</h1>
           <p className="muted">
-            Sends the file to <code>POST /api/invoice/v1/extraction</code> for OCR/LLM extraction.
+            {/* Sends the file to <code>POST /api/invoice/v1/extraction</code> for OCR/LLM extraction. */}
           </p>
         </div>
       </header>
