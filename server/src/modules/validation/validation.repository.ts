@@ -1,4 +1,5 @@
 import { prisma } from '../../prisma/client';
+import { AppError } from '../../shared/errors/app-error';
 import { RuleResult } from './validation.types';
 
 export class ValidationRepository {
@@ -13,6 +14,26 @@ export class ValidationRepository {
         message: r.message
       }))
     });
+  }
+
+  async getReviewById(InvoiceId: string) {
+
+    const review = await prisma.validationResult.findFirst({ where: { invoiceId: InvoiceId } })
+
+    if (!review) {
+      throw new AppError('no review found on this invoice')
+    }
+    return review
+  }
+
+  async  getInvoiceById(invoiceId: string){
+      const invoice = await prisma.invoice.findUnique({where:{id:invoiceId}})
+
+      if(!invoice){
+      throw new AppError('no invoice found')
+
+      }
+      return invoice
   }
 
   async getLatestResults(invoiceId: string) {

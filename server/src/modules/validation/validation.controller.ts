@@ -26,4 +26,20 @@ export class ValidationController {
             next(error);
         }
     }
+
+    async getReviewById(req: Request, res: Response, next: NextFunction): Promise<any> {
+        const invoiceId = Array.isArray(req.params.invoiceId)
+            ? req.params.invoiceId[0]
+            : req.params.invoiceId;
+
+        try {
+
+            const result = await this.validationService.getReviewById(invoiceId);
+
+            res.status(200).json({data:result})
+        } catch (error) {
+            console.error('Error during invoice validation:', error);
+            next(error);
+        }
+    }
 }

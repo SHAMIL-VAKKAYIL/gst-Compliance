@@ -14,6 +14,7 @@ const validatationCtrl = new ValidationController(validationSvc);
 
 router.post('/validate/:invoiceId', validatationCtrl.validateInvoice.bind(validatationCtrl));
 
+router.get('/review/:invoiceId',validatationCtrl.getReviewById.bind(validatationCtrl))
 
 // POST /api/invoice/v1/validate/:id
 
