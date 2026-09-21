@@ -3,6 +3,10 @@ import { AppError } from '../../shared/errors/app-error';
 import { RuleResult } from './validation.types';
 
 export class ValidationRepository {
+
+
+
+
   async saveResults(invoiceId: string, runAt: Date, results: RuleResult[]) {
     await prisma.validationResult.createMany({
       data: results.map(r => ({
@@ -26,15 +30,21 @@ export class ValidationRepository {
     return review
   }
 
-  async  getInvoiceById(invoiceId: string){
-      const invoice = await prisma.invoice.findUnique({where:{id:invoiceId}})
 
-      if(!invoice){
-      throw new AppError('no invoice found')
 
-      }
-      return invoice
+  async updateSummaryStatus(id: string, summary: string, status: 'PENDING' | 'COMPLETE' | 'FAILED') {
+    try {
+      return await prisma.invoice.update({
+        where: { id: id },
+        data: { summary, summaryStatus: status },
+      })
+    }
+    catch (error) {
+      throw new AppError('failed to store summary')
+    }
   }
+
+
 
   async getLatestResults(invoiceId: string) {
     const latest = await prisma.validationResult.findFirst({

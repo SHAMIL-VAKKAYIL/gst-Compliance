@@ -2,20 +2,21 @@ import express from 'express';
 import { ValidationController } from './validation.controller';
 import { ValidationService } from './validaton.service';
 import { ValidationRepository } from './validation.repository';
+import { LLMService } from '../llm-module/llm.service';
 
 
 
 const router = express.Router();
 
+const llmSvc = new LLMService()
 const validationRepo = new ValidationRepository();
-const validationSvc = new ValidationService(validationRepo);
+const validationSvc = new ValidationService(validationRepo,llmSvc);
 const validatationCtrl = new ValidationController(validationSvc);
 
 
 router.post('/validate/:invoiceId', validatationCtrl.validateInvoice.bind(validatationCtrl));
 
 router.get('/review/:invoiceId',validatationCtrl.getReviewById.bind(validatationCtrl))
-
 // POST /api/invoice/v1/validate/:id
 
 

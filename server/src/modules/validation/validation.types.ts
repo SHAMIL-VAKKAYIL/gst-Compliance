@@ -26,3 +26,8 @@ export interface InvoiceForValidation {
         lineTotal: number | null;
     }[];
 }
+
+export interface SummaryResult{
+    summary:string;
+    invoiceId:string
+}

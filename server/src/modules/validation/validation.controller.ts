@@ -20,6 +20,7 @@ export class ValidationController {
                 invoiceId: invoiceId,
                 validationResults: results
             });
+            await this.validationService.generateAndSummary(invoiceId, invoice, results)
         } catch (error) {
 
             console.error('Error during invoice validation:', error);
@@ -36,7 +37,7 @@ export class ValidationController {
 
             const result = await this.validationService.getReviewById(invoiceId);
 
-            res.status(200).json({data:result})
+            res.status(200).json({ data: result })
         } catch (error) {
             console.error('Error during invoice validation:', error);
             next(error);
