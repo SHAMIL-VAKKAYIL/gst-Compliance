@@ -1,28 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AppError } from '../../shared/errors/app-error';
+import { LLMExtractedData, RuleResult } from './llm.types';
 
-interface LLMLineItem {
-  description: string | null;
-  hsnCode: string | null;
-  quantity: number | null;
-  unitPrice: number | null;
-  taxableValue: number | null;
-  taxRate: number | null;
-  igstAmount: number | null;
-  cgstAmount: number | null;
-  sgstAmount: number | null;
-  lineTotal: number | null;
-}
 
-interface LLMExtractedData {
-  gstin: string | null;
-  invoiceNumber: string | null;
-  invoiceDate: string | null; // YYYY-MM-DD
-  vendorName: string | null;
-  amount: number | null;
-  lineItems: LLMLineItem[];
-}
 
-export class LLMExtractionService {
+export class LLMService {
   private client: GoogleGenerativeAI;
 
   constructor() {
@@ -90,4 +72,31 @@ ${rawText}
       return null;
     }
   }
+
+  async descriptionGenerate(invoiceId: string, invoice: any, results: RuleResult[]) {
+    try {
+
+      const prompt = `You are summarizing GST invoice validation results for a business owner, in plain English, 2-3 sentences.
+      Invoice: GSTIN ${invoice.gstin}, vendor ${invoice.vendorName}, amount ${invoice.amount}.
+      Validation results:${results.map(r => `- ${r.ruleCode}: ${r.passed ? 'PASSED' : 'FAILED'} — ${r.message}`).join('\n')}
+      
+      If everything passed, say so plainly and briefly. If there are failures, lead with the most serious one (ERROR severity before WARNING). Do not repeat rule codes verbatim — describe issues in plain business language.`;
+
+      const model = this.client.getGenerativeModel({
+        model: 'gemini-3.5-flash-lite',
+        generationConfig: { temperature: 0.3 }, // slight variation is fine for prose, unlike extraction
+      })
+
+      const result = await model.generateContent(prompt);
+      const summary = result.response.text().trim();
+      return { invoiceId, summary }
+
+    } catch (error) {
+      console.log(error);
+      throw new AppError('failed generate summary')
+
+    }
+
+  }
 }
+

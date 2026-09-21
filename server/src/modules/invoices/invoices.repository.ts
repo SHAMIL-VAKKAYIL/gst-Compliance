@@ -13,6 +13,7 @@ export class InvoiceRepository {
     try {
       console.log(userId, '3432423');
 
+
       const invoice = await prisma.invoice.create({
         data: {
           userId,
@@ -23,8 +24,26 @@ export class InvoiceRepository {
           amount: invoiceData.totalAmount,
           extractionStatus: extractionStatus,
           summaryStatus: 'PENDING',
-        }
+          lineItems: {
+            create: (invoiceData.lineItems ?? []).map((item) => ({
+              description: item.description,
+              hsnCode: item.hsnCode,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              taxableValue: item.taxableValue,
+              taxRate: item.taxRate,
+              igstAmount: item.igstAmount,
+              cgstAmount: item.cgstAmount,
+              sgstAmount: item.sgstAmount,
+              lineTotal: item.lineTotal,
+            })),
+          },
+        },
+        include: {
+          lineItems: true, // return the created line items in the same response, useful for confirming immediately
+        },
       });
+
       return {
         id: invoice.id,
         ...invoiceData,
@@ -58,13 +77,26 @@ export class InvoiceRepository {
 
   async getInvoices(userId: string) {
     try {
-      return await prisma.invoice.findMany({where :{userId:userId}})
+      return await prisma.invoice.findMany({ where: { userId: userId } })
     } catch (error) {
       throw new AppError(`Failed to retrieve invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
     }
   }
 
+  async fetchSummary(invoiceId: string) {
+    try {
+      return await prisma.invoice.findFirst({
+        where: { id: invoiceId }, select: {
+          summary: true,
+          summaryStatus: true
+        }
+      })
+    } catch (error) {
+      throw new AppError(`Failed to retrieve summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+    }
+  }
 
   async updateInvoice(invoiceId: string, updateData: Partial<ExtractedInvoiceData>): Promise<any> {
     // update only for amount

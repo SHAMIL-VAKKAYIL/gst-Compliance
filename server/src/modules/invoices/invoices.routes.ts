@@ -4,7 +4,7 @@ import { ExtractionController, InvoicesController } from './invoices.controller'
 import { ExtractionService } from './extraction.service';
 import { InvoiceRepository } from './invoices.repository';
 import { InvoiceService } from './invoices.service';
-import { LLMExtractionService } from '../llm-module/llm.service';
+import { LLMService } from '../llm-module/llm.service';
 import { requireAuth } from '../../shared/middleware/auth';
 
 const router: Router = express.Router();
@@ -42,7 +42,7 @@ const upload = multer({
 
 // Initialize dependencies
 const invoiceRepository = new InvoiceRepository();
-const llmExtractionService = new LLMExtractionService();
+const llmExtractionService = new LLMService();
 const extractionSvc = new ExtractionService(invoiceRepository, llmExtractionService);
 const extractionCtrl = new ExtractionController(extractionSvc);
 const invoicesCtrl = new InvoicesController(extractionSvc, new InvoiceService(invoiceRepository));
@@ -53,5 +53,6 @@ router.post('/extraction', requireAuth, upload.single('file'), extractionCtrl.ex
 
 router.get('/invoices', requireAuth, invoicesCtrl.fetchInvoices.bind(invoicesCtrl))
 router.get('/:invoiceId', requireAuth, invoicesCtrl.fetchInvoiceById.bind(invoicesCtrl));
+router.get('/summary/:invoiceId', requireAuth, invoicesCtrl.fetchSummaryById.bind(invoicesCtrl));
 
 export default router;

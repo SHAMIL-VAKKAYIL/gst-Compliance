@@ -3,7 +3,7 @@ import { PDFParser } from './pdf-parser/pdf-parser';
 import { OCRParser } from './ocr-parser/ocr-parser';
 import { ExtractionResult, ExtractedInvoiceData } from './invoices.types';
 import { FileTypeDetector } from '../../shared/utils/file-type-detector';
-import { LLMExtractionService } from '../llm-module/llm.service';
+import { LLMService } from '../llm-module/llm.service';
 
 interface ValidationResult {
     invoiceNumberValid: boolean;
@@ -22,7 +22,7 @@ export class ExtractionService {
 
     constructor(
         private invoiceRepository: InvoiceRepository,
-        private llmExtractionService: LLMExtractionService
+        private LLMService: LLMService
     ) {
         this.pdfParser = new PDFParser();
         this.ocrParser = new OCRParser();
@@ -127,7 +127,7 @@ export class ExtractionService {
     }
 
     private async processExtraction(extractionResult: ExtractionResult, userId?: string): Promise<ExtractionResult> {
-        const llmResult = await this.llmExtractionService.extractAll(extractionResult.rawText || '');
+        const llmResult = await this.LLMService.extractAll(extractionResult.rawText || '');
 
         if (!llmResult) {
             return {

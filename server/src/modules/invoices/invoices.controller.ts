@@ -14,6 +14,7 @@ export class InvoicesController {
             const invoiceId = req.params.invoiceId;
             const userId = req.user?.userId;
 
+
             if (!userId) {
                 return res.status(401).json({ success: false, error: 'Authentication required' });
             }
@@ -42,6 +43,23 @@ export class InvoicesController {
             next(error)
         }
 
+    }
+
+    async fetchSummaryById(req: any, res: any, next: any) {
+        const userId = req.user?.userId
+        const invoiceId = req.params.invoiceId;
+        try {
+            if (!userId) {
+                return res.status(401).json({ success: false, error: 'Authentication required' });
+            }
+            const summary = await this.invoiceService.fetchSummary(invoiceId);
+
+            return res.status(200).json(summary);
+
+        } catch (error) {
+            next(error)
+
+        }
     }
 }
 
