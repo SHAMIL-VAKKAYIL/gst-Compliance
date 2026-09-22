@@ -7,12 +7,13 @@ import {
   type ReactNode,
 } from 'react'
 import * as authApi from '../api/auth'
-import { clearTokens, getAccessToken, getUserId } from '../api/client'
+import { clearTokens, getAccessToken, getEmailId, getUserId } from '../api/client'
 import type { AuthTokens } from '../types'
 
 interface AuthContextValue {
   isAuthenticated: boolean
   userId: string | null
+  userEmail: string | null
   login: (email: string, password: string) => Promise<AuthTokens>
   register: (email: string, password: string) => Promise<{ userId: string }>
   googleLogin: (idToken: string) => Promise<AuthTokens | { message: string }>
@@ -24,11 +25,13 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(() => getUserId())
   const [accessToken, setAccessTokenState] = useState<string | null>(() => getAccessToken())
+  const [userEmail, setUserEmail] = useState(() => getEmailId())
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await authApi.login(email, password)
     setUserId(result.userId)
     setAccessTokenState(result.accessToken)
+    setUserEmail(result.email)
     return result
   }, [])
 
@@ -41,6 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if ('accessToken' in result && result.accessToken) {
       setUserId(result.userId)
       setAccessTokenState(result.accessToken)
+      setUserEmail(result.email)
+
     }
     return result
   }, [])
@@ -55,12 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       isAuthenticated: Boolean(accessToken),
       userId,
+      userEmail,
       login,
       register,
       googleLogin,
       logout,
     }),
-    [accessToken, userId, login, register, googleLogin, logout],
+    [accessToken, userId, userEmail, login, register, googleLogin, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

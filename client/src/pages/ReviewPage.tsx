@@ -1,102 +1,120 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getInvoice, updateInvoice } from '../lib/invoiceStore'
 import { validateInvoice } from '../api/validation'
 import { ApiError } from '../api/client'
 import { InvoiceHeaderForm } from '../components/review/InvoiceHeaderForm'
 import { LineItemsTable } from '../components/review/LineItemsTable'
-import { FieldValidityBadges } from '../components/review/FieldValidityBadges'
 import { ValidationResultsList } from '../components/review/ValidationResultsList'
 import { ComplianceSummaryCard } from '../components/review/ComplianceSummaryCard'
-import type { ExtractedInvoiceData, RuleResult } from '../types'
+import { checkGeneratedSummary, getInvoiceById } from '../api/invoices'
 
 export function ReviewPage() {
   const { id } = useParams<{ id: string }>()
-  const stored = useMemo(() => (id ? getInvoice(id) : undefined), [id])
-  const [data, setData] = useState<ExtractedInvoiceData | null>(stored?.data ?? null)
-  const [ruleResults, setRuleResults] = useState<RuleResult[] | undefined>(stored?.ruleResults)
+  const [invoice, setInvoice] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [checking, setChecking] = useState<boolean>(false)
 
-  if (!stored || !data || !id) {
+
+  useEffect(() => {
+    if (!id) return
+    setLoading(true)
+    setLoadError(null)
+    getInvoiceById(id)
+      .then(setInvoice)
+      .catch((err) => {
+        setLoadError(err instanceof ApiError ? err.message : 'Could not load invoice')
+      })
+      .finally(() => setLoading(false))
+  }, [id])
+
+  console.log(invoice);
+
+
+
+  async function runValidation() {
+    if (!id) return
+    setValidating(true)
+    setValidationError(null)
+    try {
+      const response = await validateInvoice(id, invoice)
+      setInvoice((prev: any) =>
+        prev ? { ...prev, validationResults: response.validationResults } : prev
+      )
+    } catch (err) {
+      setValidationError(err instanceof ApiError ? err.message : 'Validation failed')
+    } finally {
+      setValidating(false)
+    }
+  }
+
+  async function checkSummary() {
+    if (!id) return
+    setChecking(true)
+    try {
+      const response: any = await checkGeneratedSummary(id)
+
+      setInvoice((prev: any) =>
+        prev
+          ? {
+            ...prev,
+            summary: response.summary,
+            summaryStatus: response.summaryStatus
+          }
+          : prev
+      )
+
+    } catch (err) {
+      setValidationError(err instanceof ApiError ? err.message : 'summary generation failed')
+    }
+
+  }
+
+  if (loading) {
+    return <div className="page"><p className="muted">Loading invoice…</p></div>
+  }
+
+  if (loadError || !invoice) {
     return (
       <div className="page">
         <h1>Invoice not found</h1>
         <p className="muted">
-          This review session may have expired. <Link to="/invoices/upload">Upload again</Link>.
+          {loadError ?? 'This invoice could not be loaded.'} <Link to="/invoices">Back to invoices</Link>.
         </p>
       </div>
     )
-  }
-
-  function handleChange(next: ExtractedInvoiceData) {
-    setData(next)
-    updateInvoice(id!, { data: next })
-  }
-
-  async function runValidation() {
-    setValidating(true)
-    setValidationError(null)
-    try {
-      const response = await validateInvoice(stored!.id, {
-        gstin: data!.gstin,
-        invoiceNumber: data!.invoiceNumber || null,
-        vendorName: data!.vendorName || null,
-        invoiceDate: data!.invoiceDate,
-        amount: data!.totalAmount ?? data!.invoiceAmount ?? null,
-        lineItems: data!.lineItems,
-      })
-      setRuleResults(response.validationResults)
-      updateInvoice(id!, { ruleResults: response.validationResults })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setValidationError(err.message)
-      } else if (err instanceof TypeError) {
-        setValidationError('Could not reach validation API. Is it mounted on the server?')
-      } else {
-        setValidationError(err instanceof Error ? err.message : 'Validation failed')
-      }
-    } finally {
-      setValidating(false)
-    }
   }
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">{stored.fileName}</p>
-          <h1>Review extraction</h1>
+          <p className="eyebrow">{invoice.vendorName}</p>
+          <h1>Review invoice</h1>
           <p className="muted">
-            Status: <strong>{stored.extractionStatus ?? 'UNKNOWN'}</strong>
-            {stored.confidence != null ? ` · Confidence ${(stored.confidence * 100).toFixed(0)}%` : ''}
+            Status: <strong>{invoice.extractionStatus}</strong>
           </p>
         </div>
-        <Link to="/invoices/upload" className="btn btn-ghost">
-          Upload another
-        </Link>
+        <Link to="/invoices" className="btn btn-ghost">Back to invoices</Link>
       </header>
 
-      {stored.extractionStatus === 'NEEDS_CORRECTION' ? (
+      {invoice.extractionStatus === 'NEEDS_CORRECTION' ? (
         <div className="banner banner-warn">
           Extraction needs correction — review and fix fields below before relying on this invoice.
         </div>
       ) : null}
 
-      <FieldValidityBadges metrics={stored.fieldValidation} />
-      <InvoiceHeaderForm
-        value={data}
-        onChange={handleChange}
-        fieldValidation={stored.fieldValidation}
-      />
-      <LineItemsTable items={data.lineItems ?? []} />
+      <InvoiceHeaderForm value={invoice} readOnly={true} />
+      <LineItemsTable items={invoice.lineItems ?? []} />
       <ValidationResultsList
-        results={ruleResults}
+        results={invoice.validationResults}
         loading={validating}
         error={validationError}
         onRun={runValidation}
       />
-      <ComplianceSummaryCard summary={stored.summary} />
+      {invoice.validationResults.length > 0 && <ComplianceSummaryCard summary={invoice.summary} checking={checking} onCheckSummary={checkSummary} />}
     </div>
   )
 }

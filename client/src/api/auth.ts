@@ -6,7 +6,7 @@ export async function login(email: string, password: string): Promise<AuthTokens
     method: 'POST',
     data: { email, password },
   })
-  setTokens(result.accessToken, result.userId)
+  setTokens(result.accessToken, result.userId, result.email)
   return result
 }
 
@@ -22,10 +22,12 @@ export async function googleLogin(idToken: string): Promise<AuthTokens | { messa
     method: 'POST',
     data: { idToken },
   })
-  if ('accessToken' in result && result.accessToken) {
-    setTokens(result.accessToken, result.userId)
-  }
   console.log(result);
   
+  if ('accessToken' in result && result.accessToken) {
+    setTokens(result.accessToken, result.userId, result.email)
+  }
+  console.log(result);
+
   return result
 }

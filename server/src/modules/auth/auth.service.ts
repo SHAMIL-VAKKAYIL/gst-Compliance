@@ -33,12 +33,12 @@ export class OauthService {
             if (!existing) {
                 const user = await this.authRepository.createGoogleUser(payload.email, payload.sub);
                 const tokens = this.tokenService.issueTokens(user.id);
-                return { ...tokens, userId: user.id, isNewAccount: true };
+                return { ...tokens, userId: user.id, isNewAccount: true, email: user.email };
             }
 
             if (existing.providers.includes('GOOGLE') && existing.googleId === payload.sub) {
                 const tokens = this.tokenService.issueTokens(existing.id);
-                return { ...tokens, userId: existing.id, isNewAccount: false };
+                return { ...tokens, userId: existing.id, isNewAccount: false, email: existing.email };
             }
 
             if (!existing.emailVerified) {
@@ -47,7 +47,7 @@ export class OauthService {
 
             const mergedUser = await this.authRepository.linkGoogleToUser(existing.id, payload.sub);
             const tokens = this.tokenService.issueTokens(mergedUser.id);
-            return { ...tokens, userId: mergedUser.id, isNewAccount: false };
+            return { ...tokens, userId: mergedUser.id, isNewAccount: false, email: mergedUser.email };
         } catch (error) {
             console.error('Error occurred while verifying Google token:', error);
             throw new Error('Failed to verify Google token');
@@ -87,6 +87,6 @@ export class AuthService {
         }
 
         const tokens = this.tokenService.issueTokens(user.id);
-        return { ...tokens, userId: user.id };
+        return { ...tokens, userId: user.id, email: user.email };
     }
 }

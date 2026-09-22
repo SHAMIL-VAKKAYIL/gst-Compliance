@@ -28,7 +28,7 @@ export function ValidationResultsList({
           <p>{error}</p>
           <p className="muted small">
             Validation API may not be mounted yet. Endpoint:{' '}
-            <code>POST /api/invoice/v1/validate/:invoiceId</code>
+            {/* <code>POST /api/invoice/v1/validate/:invoiceId</code> */}
           </p>
         </div>
       ) : null}

@@ -34,7 +34,7 @@ export class AuthController {
             const result = await this.oauthService.googleAuth(idToken);
             console.log(result);
             this.setRefreshTokenCookie(res, result.refreshToken);
-            res.status(200).json({accessToken:result.accessToken, userId: result.userId, isNewAccount: result.isNewAccount});
+            res.status(200).json({accessToken:result.accessToken, userId: result.userId, isNewAccount: result.isNewAccount,email:result.email});
         } catch (error) {
             next(error);
         }

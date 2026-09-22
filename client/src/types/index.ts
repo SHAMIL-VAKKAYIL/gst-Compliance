@@ -34,9 +34,8 @@ export interface ExtractedInvoiceData {
   vendorName: string
   gstin: string
   invoiceDate: string | null
-  invoiceAmount: number
   tax: number
-  totalAmount: number
+  amount: number
   extractionStatus?: ExtractionStatus
   lineItems: LineItem[]
 }
@@ -68,6 +67,7 @@ export interface AuthTokens {
   refreshToken: string
   userId: string
   isNewAccount?: boolean
+  email:string
 }
 
 export interface StoredInvoice {
@@ -81,4 +81,9 @@ export interface StoredInvoice {
   fieldValidation?: ValidationMetrics
   ruleResults?: RuleResult[]
   summary?: string | null
+}
+
+export interface InvoiceSummaryStatus {
+  summary: string | null
+  summaryStatus: 'PENDING' | 'COMPLETE' | 'FAILED'
 }

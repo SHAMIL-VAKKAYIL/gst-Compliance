@@ -14,6 +14,13 @@ export async function extractInvoice(file: File): Promise<ExtractionResult> {
 export async function invoices() {
   return apiFetch('/api/invoice/v1/invoices')
 }
-export async function invoiceById(InvoiceId:string) {
-  return apiFetch(`/api/invoice/v1/${InvoiceId}`)
+
+export async function getInvoiceById(InvoiceId: string): Promise<any> {
+  const response:any = await apiFetch(`/api/invoice/v1/${InvoiceId}`)
+  return response.data
+}
+
+export async function checkGeneratedSummary(InvoiceId: string) {
+  const response = await apiFetch(`/api/invoice/v1/summary/${InvoiceId}`)
+  return response
 }

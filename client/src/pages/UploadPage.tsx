@@ -5,7 +5,6 @@ import { ApiError } from '../api/client'
 import { InvoiceDropzone } from '../components/upload/InvoiceDropzone'
 import { UploadProgress } from '../components/upload/UploadProgress'
 import { ExtractionErrorBanner } from '../components/upload/ExtractionErrorBanner'
-import { createLocalId, saveInvoice } from '../lib/invoiceStore'
 import type { ExtractionResult } from '../types'
 
 export function UploadPage() {
@@ -29,23 +28,8 @@ export function UploadPage() {
         return
       }
 
-      const localId = createLocalId()
-      const serverId = result.data.id && result.data.id !== 'generated-id'
-        ? result.data.id
-        : localId
-
-      saveInvoice({
-        localId,
-        id: serverId,
-        fileName: file.name,
-        uploadedAt: new Date().toISOString(),
-        extractionStatus: result.extractionStatus ?? result.data.extractionStatus ?? 'COMPLETE',
-        data: { ...result.data, id: serverId },
-        confidence: result.confidence,
-        fieldValidation: result.validationResults,
-      })
-
-      navigate(`/invoices/${localId}`)
+      // Real invoice now exists in the DB — go review it there, no local copy needed
+      navigate(`/invoices/${result.data.id}`)
     } catch (err) {
       if (err instanceof ApiError && err.body && typeof err.body === 'object') {
         setErrorResult(err.body as ExtractionResult)

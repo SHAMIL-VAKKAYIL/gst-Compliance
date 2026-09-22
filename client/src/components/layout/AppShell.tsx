@@ -2,13 +2,15 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 
 export function AppShell() {
-  const { isAuthenticated, userId, logout } = useAuth()
+  const { isAuthenticated, userId, userEmail, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
     navigate('/', { replace: true })
   }
+  console.log(userEmail);
+  
 
   return (
     <div className="app-shell">
@@ -29,7 +31,7 @@ export function AppShell() {
           {isAuthenticated ? (
             <>
               <span className="user-chip" title={userId ?? undefined}>
-                Signed in
+                {userEmail}
               </span>
               <button type="button" className="btn btn-ghost" onClick={handleLogout}>
                 Log out
