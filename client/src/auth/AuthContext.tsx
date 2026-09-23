@@ -7,13 +7,14 @@ import {
   type ReactNode,
 } from 'react'
 import * as authApi from '../api/auth'
-import { clearTokens, getAccessToken, getEmailId, getUserId } from '../api/client'
+import { CheckVerfied, clearTokens, getAccessToken, getEmailId, getUserId } from '../api/client'
 import type { AuthTokens } from '../types'
 
 interface AuthContextValue {
   isAuthenticated: boolean
   userId: string | null
   userEmail: string | null
+  isVerified: boolean
   login: (email: string, password: string) => Promise<AuthTokens>
   register: (email: string, password: string) => Promise<{ userId: string }>
   googleLogin: (idToken: string) => Promise<AuthTokens | { message: string }>
@@ -25,13 +26,15 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(() => getUserId())
   const [accessToken, setAccessTokenState] = useState<string | null>(() => getAccessToken())
-  const [userEmail, setUserEmail] = useState(() => getEmailId())
+  const [userEmail, setUserEmail] = useState<string | null>(() => getEmailId())
+  const [isVerified, setIsVerified] = useState(() => CheckVerfied())
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await authApi.login(email, password)
     setUserId(result.userId)
     setAccessTokenState(result.accessToken)
     setUserEmail(result.email)
+    setIsVerified(result.isVerified)
     return result
   }, [])
 
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserId(result.userId)
       setAccessTokenState(result.accessToken)
       setUserEmail(result.email)
+      setIsVerified(result.isVerified)
 
     }
     return result
@@ -61,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(accessToken),
       userId,
       userEmail,
+      isVerified,
       login,
       register,
       googleLogin,

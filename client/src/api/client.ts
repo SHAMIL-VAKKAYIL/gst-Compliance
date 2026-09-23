@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 const ACCESS_KEY = 'gst_access_token'
 const USER_KEY = 'gst_user_id'
 const USER_EMAIL = 'email_id'
+const IS_VERIFIED = 'is_verified'
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY)
@@ -15,12 +16,23 @@ export function getUserId(): string | null {
 }
 
 export function getEmailId(): string | null {
-return localStorage.getItem(USER_EMAIL)
+  return localStorage.getItem(USER_EMAIL)
 }
-export function setTokens(accessToken: string, userId: string,email:string): void {
+
+export function CheckVerfied(): boolean {
+  const isVerified = localStorage.getItem(IS_VERIFIED) === 'true'
+  return isVerified;
+}
+export function setTokens(accessToken: string, userId: string, email: string, isVerified: boolean): void {
   localStorage.setItem(ACCESS_KEY, accessToken)
   localStorage.setItem(USER_KEY, userId)
   localStorage.setItem(USER_EMAIL, email)
+  localStorage.setItem(IS_VERIFIED, isVerified.toString())
+}
+
+export function setVerifcation(isVerified: boolean) {
+  localStorage.setItem(IS_VERIFIED, isVerified.toString())
+
 }
 
 export function setAccessToken(accessToken: string): void {
@@ -31,6 +43,7 @@ export function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY)
   localStorage.removeItem(USER_KEY)
   localStorage.removeItem(USER_EMAIL)
+  localStorage.removeItem(IS_VERIFIED)
 }
 
 const api = axios.create({

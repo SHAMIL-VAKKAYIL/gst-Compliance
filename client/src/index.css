@@ -481,7 +481,7 @@ input:focus {
   margin: 0;
 }
 
-.invoice-list li + li {
+.invoice-list li+li {
   border-top: 1px solid var(--line);
 }
 
@@ -569,9 +569,27 @@ input:focus {
     flex-direction: column;
   }
 }
+
 .summary-empty {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.75rem;
+}
+
+.verified-badge {
+  color: #16a34a;
+  /* green */
+  font-weight: bold;
+}
+
+.verify-badge-button {
+  background: none;
+  border: none;
+  color: #b45309;
+  /* amber/warning */
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85em;
+  padding: 0;
 }

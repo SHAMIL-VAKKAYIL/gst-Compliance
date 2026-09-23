@@ -67,6 +67,7 @@ export interface AuthTokens {
   refreshToken: string
   userId: string
   isNewAccount?: boolean
+  isVerified:boolean
   email:string
 }
 

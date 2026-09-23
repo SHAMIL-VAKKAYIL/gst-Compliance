@@ -8,6 +8,7 @@ import { ReviewPage } from './pages/ReviewPage'
 import { InvoicesPage } from './pages/InvoicesPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { VerifyEmailPage } from './pages/VerifyEmailPage'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
           <Route path="/invoices/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
           <Route path="/invoices/:id" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

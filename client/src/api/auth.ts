@@ -1,4 +1,4 @@
-import { apiFetch, setTokens } from './client'
+import { apiFetch, setTokens, setVerifcation } from './client'
 import type { AuthTokens } from '../types'
 
 export async function login(email: string, password: string): Promise<AuthTokens> {
@@ -6,7 +6,7 @@ export async function login(email: string, password: string): Promise<AuthTokens
     method: 'POST',
     data: { email, password },
   })
-  setTokens(result.accessToken, result.userId, result.email)
+  setTokens(result.accessToken, result.userId, result.email, result.isVerified)
   return result
 }
 
@@ -23,11 +23,23 @@ export async function googleLogin(idToken: string): Promise<AuthTokens | { messa
     data: { idToken },
   })
   console.log(result);
-  
+
   if ('accessToken' in result && result.accessToken) {
-    setTokens(result.accessToken, result.userId, result.email)
+    setTokens(result.accessToken, result.userId, result.email, result.isVerified)
   }
   console.log(result);
 
   return result
+}
+
+export async function sendVerificationMail(email: string | null) {
+  return apiFetch('/api/auth/v1/send-email', { method: 'POST', data: { email } })
+}
+
+export async function verifyEmail(token: string): Promise<{ message: string, verified: boolean }> {
+  const res: { message: string, verified: boolean } = await apiFetch('/api/auth/v1/verify-email',
+    { method: 'POST', data: { token } })
+  console.log(res);
+  setVerifcation(res.verified)
+  return res
 }

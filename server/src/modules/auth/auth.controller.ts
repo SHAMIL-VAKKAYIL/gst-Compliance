@@ -1,6 +1,6 @@
-import { log } from "node:console";
 import { AuthService, OauthService } from "./auth.service";
 import { Request, Response, NextFunction } from "express";
+import { EmailService } from "./email.service";
 
 function getRefreshTokenFromCookie(req: Request): string | null {
     const cookieHeader = req.headers.cookie ?? "";
@@ -34,7 +34,7 @@ export class AuthController {
             const result = await this.oauthService.googleAuth(idToken);
             console.log(result);
             this.setRefreshTokenCookie(res, result.refreshToken);
-            res.status(200).json({accessToken:result.accessToken, userId: result.userId, isNewAccount: result.isNewAccount,email:result.email});
+            res.status(200).json({ accessToken: result.accessToken, userId: result.userId, isNewAccount: result.isNewAccount, email: result.email, isVerified: result.isVerified });
         } catch (error) {
             next(error);
         }
@@ -60,6 +60,28 @@ export class AuthController {
             next(error);
         }
     }
+    async sendEmail(req: any, res: Response, next: NextFunction): Promise<void> {
+        const { email } = req.body;
+        const userId = req.user?.userId
+        try {
+            await this.authService.storeToken(email, userId)
+            res.status(200).json({ message: 'send email to your email-id ' })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async emailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { token } = req.body;
+            const result = await this.authService.verifyEmail(token);
+            res.status(200).json(result);
+        } catch (error) {
+            next(error)
+        }
+    }
+
+
 
     refresh(req: Request, res: Response, next: NextFunction): void {
         try {

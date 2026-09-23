@@ -25,6 +25,7 @@ export class AuthRepository {
         });
     }
 
+
     async createUser(email: string, passwordHash: string) {
 
         const existingUser = await this.findByEmail(email);
@@ -34,5 +35,43 @@ export class AuthRepository {
         return prisma.user.create({
             data: { email, password: passwordHash, providers: ['EMAIL'], emailVerified: false }
         });
+    }
+
+
+    async storeToken(userId: string, token: string) {
+        try {
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+            return await prisma.verificationToken.create({
+                data: {
+                    userId,
+                    token,
+                    expiresAt,
+                },
+            });
+        } catch (error) {
+            throw new AppError("Token already exists", 409);
+        }
+    }
+    async findVerificationToken(token: string) {
+        try {
+            return await prisma.verificationToken.findUnique({ where: { token } })
+
+        } catch (error) {
+            throw new AppError("Token did not exists", 409);
+
+        }
+    }
+
+    async markEmailVerified(userId: string) {
+        try {
+            return await prisma.user.update({
+                where: { id: userId },
+                data: { emailVerified: true }
+            })
+        } catch (error) {
+            throw new AppError("user not found", 409);
+
+        }
     }
 }

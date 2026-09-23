@@ -1,4 +1,5 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
+import crypto from 'crypto'
 
 export type AuthTokens = {
 	accessToken: string;
@@ -55,5 +56,9 @@ export class TokenService {
 		}
 
 		return secret;
+	}
+	generateInvitationToken() {
+		const token = crypto.randomBytes(32).toString("hex");
+		return token
 	}
 }

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { AuthRepository } from "./auth.repository";
 import { TokenService } from "../../shared/utils/token.service";
 import { AppError } from "../../shared/errors/app-error";
+import { EmailService } from "./email.service";
 
 export class OauthService {
     private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -14,44 +15,43 @@ export class OauthService {
     ) { }
 
     async googleAuth(idToken: string) {
+        let payload;
         try {
-
-
             const ticket = await this.googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
-            const payload = ticket.getPayload();
-
-            if (!payload || !payload.email) {
-                throw new AppError('Invalid Google token'); // or your custom AppAppError class, matching login/register's pattern
-            }
-
-            if (payload.email_verified !== true) {
-                throw new AppError('Google account email is not verified');
-            }
-
-            const existing = await this.authRepository.findByEmail(payload.email);
-
-            if (!existing) {
-                const user = await this.authRepository.createGoogleUser(payload.email, payload.sub);
-                const tokens = this.tokenService.issueTokens(user.id);
-                return { ...tokens, userId: user.id, isNewAccount: true, email: user.email };
-            }
-
-            if (existing.providers.includes('GOOGLE') && existing.googleId === payload.sub) {
-                const tokens = this.tokenService.issueTokens(existing.id);
-                return { ...tokens, userId: existing.id, isNewAccount: false, email: existing.email };
-            }
-
-            if (!existing.emailVerified) {
-                throw new AppError('An account with this email already exists but is not verified. Please verify your email before linking Google.');
-            }
-
-            const mergedUser = await this.authRepository.linkGoogleToUser(existing.id, payload.sub);
-            const tokens = this.tokenService.issueTokens(mergedUser.id);
-            return { ...tokens, userId: mergedUser.id, isNewAccount: false, email: mergedUser.email };
+            payload = ticket.getPayload();
         } catch (error) {
-            console.error('Error occurred while verifying Google token:', error);
-            throw new Error('Failed to verify Google token');
+            console.error('Error verifying Google ID token:', error);
+            throw new AppError('Invalid Google token');
         }
+
+        if (!payload || !payload.email) {
+            throw new AppError('Invalid Google token');
+        }
+
+        if (payload.email_verified !== true) {
+            throw new AppError('Google account email is not verified');
+        }
+
+        const existing = await this.authRepository.findByEmail(payload.email);
+
+        if (!existing) {
+            const user = await this.authRepository.createGoogleUser(payload.email, payload.sub);
+            const tokens = this.tokenService.issueTokens(user.id);
+            return { ...tokens, userId: user.id, isNewAccount: true, email: user.email, isVerified: user.emailVerified };
+        }
+
+        if (existing.providers.includes('GOOGLE') && existing.googleId === payload.sub) {
+            const tokens = this.tokenService.issueTokens(existing.id);
+            return { ...tokens, userId: existing.id, isNewAccount: false, email: existing.email, isVerified: existing.emailVerified };
+        }
+
+        if (!existing.emailVerified) {
+            throw new AppError('An account with this email already exists but is not verified. Please verify your email before linking Google.');
+        }
+
+        const mergedUser = await this.authRepository.linkGoogleToUser(existing.id, payload.sub);
+        const tokens = this.tokenService.issueTokens(mergedUser.id);
+        return { ...tokens, userId: mergedUser.id, isNewAccount: false, email: mergedUser.email, isVerified: mergedUser.emailVerified };
     }
 
     refreshAccessToken(refreshToken: string) {
@@ -64,6 +64,7 @@ export class AuthService {
     constructor(
         private authRepository: AuthRepository,
         private tokenService: TokenService,
+        private emailService: EmailService
     ) { }
 
     async register(email: string, password: string) {
@@ -87,6 +88,34 @@ export class AuthService {
         }
 
         const tokens = this.tokenService.issueTokens(user.id);
-        return { ...tokens, userId: user.id, email: user.email };
+        return { ...tokens, userId: user.id, email: user.email, isVerified: user.emailVerified };
+    }
+    async storeToken(email: string, userId: string) {
+        try {
+            const token = this.tokenService.generateInvitationToken();
+
+            await this.authRepository.storeToken(userId, token)
+            await this.emailService.sendVerificationEmail(email, token)
+
+        } catch (error) {
+            throw new AppError('Invalid tpoken');
+
+        }
+    }
+
+    async verifyEmail(token: string) {
+        try {
+
+            const record = await this.authRepository.findVerificationToken(token);
+            if (!record || record.expiresAt < new Date()) {
+                throw new Error('Invalid or expired token');
+            }
+
+            await this.authRepository.markEmailVerified(record.userId);
+            return { message: 'Email verified', verified: true };
+        } catch (error) {
+            throw new Error('Invalid token');
+        }
     }
 }
+
