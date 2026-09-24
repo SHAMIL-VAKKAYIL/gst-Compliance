@@ -45,7 +45,6 @@ export class ValidationRepository {
   }
 
 
-
   async getLatestResults(invoiceId: string) {
     const latest = await prisma.validationResult.findFirst({
       where: { invoiceId },

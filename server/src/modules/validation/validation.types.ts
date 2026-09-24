@@ -14,7 +14,7 @@ export interface InvoiceForValidation {
     gstin: string;
     invoiceNumber: string | null;
     vendorName: string | null;
-    invoiceDate: Date | null;
+    invoiceDate: Date |string ;
     amount: number | null;
     lineItems?: {
         description: string | null;
