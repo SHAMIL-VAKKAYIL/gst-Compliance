@@ -1,6 +1,6 @@
 import { Rule, RuleResult, InvoiceForValidation } from '../validation.types';
 
-function isDateValid(date: Date | string): boolean {
+function isDateValid(date: any): boolean {
     const parsedDate = date instanceof Date ? date : new Date(date);
 
     if (isNaN(parsedDate.getTime())) return false;

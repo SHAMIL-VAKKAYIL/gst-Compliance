@@ -7,9 +7,7 @@ export const perLineTaxCalculationRule: Rule = {
   evaluate(invoice: InvoiceForValidation): RuleResult {
     const errors: string[] = [];
 
-    for (const item of invoice.lineItems ?? []) {
-        console.log(item);
-        
+    for (const item of invoice.lineItems ?? []) {        
       if (item.taxableValue == null || item.taxRate == null) continue; // can't check, skip
 
       const expectedTax = (Number(item.taxableValue) * Number(item.taxRate)) / 100;

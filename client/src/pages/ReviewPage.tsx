@@ -39,7 +39,7 @@ export function ReviewPage() {
     setValidating(true)
     setValidationError(null)
     try {
-      const response = await validateInvoice(id, invoice)
+      const response = await validateInvoice(id)
       setInvoice((prev: any) =>
         prev ? { ...prev, validationResults: response.validationResults } : prev
       )

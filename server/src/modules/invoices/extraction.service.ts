@@ -168,6 +168,10 @@ export class ExtractionService {
             extractionStatus = 'FAILED';
             failureReason = 'MISSING_REQUIRED_FIELDS';
             shouldSave = false;
+        }else if (!validation.dateValid) {
+            extractionStatus = 'FAILED';
+            failureReason = 'MISSING_REQUIRED_FIELDS';
+            shouldSave = false;
         } else if (!validation.totalValid) {
             extractionStatus = 'NEEDS_CORRECTION';
             shouldSave = true;

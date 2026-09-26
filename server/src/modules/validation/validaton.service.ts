@@ -7,6 +7,7 @@ import { perLineTaxCalculationRule } from './rules/per-line-tax.rule';
 import { LLMService } from '../llm-module/llm.service';
 import { AppError } from '../../shared/errors/app-error';
 import { validateFutureDate } from './rules/future-date-check';
+import { hsnRateValidationRule } from './rules/hsn-code-validation';
 
 export class ValidationService {
   constructor(
@@ -30,6 +31,7 @@ export class ValidationService {
     }
     
     results.push(validateFutureDate.evaluate(invoice))
+    results.push(hsnRateValidationRule.evaluate(invoice))
 
     await this.validationRepository.saveResults(invoiceId, runAt, results);
     return results;

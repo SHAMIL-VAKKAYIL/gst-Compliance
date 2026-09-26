@@ -14,12 +14,13 @@ export interface InvoiceForValidation {
     gstin: string;
     invoiceNumber: string | null;
     vendorName: string | null;
-    invoiceDate: Date |string ;
+    invoiceDate: Date | null;
     amount: number | null;
     lineItems?: {
         description: string | null;
         taxableValue: number | null;
         taxRate: number | null;
+        hsnCode: string | null
         igstAmount: number | null;
         cgstAmount: number | null;
         sgstAmount: number | null;
@@ -27,7 +28,7 @@ export interface InvoiceForValidation {
     }[];
 }
 
-export interface SummaryResult{
-    summary:string;
-    invoiceId:string
+export interface SummaryResult {
+    summary: string;
+    invoiceId: string
 }

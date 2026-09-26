@@ -1,19 +1,25 @@
 import { NextFunction, Request, Response } from "express";
 import { ValidationService } from "./validaton.service";
+import { InvoiceService } from "../invoices/invoices.service";
 
 export class ValidationController {
 
-    constructor(private validationService: ValidationService) { }
+    constructor(private validationService: ValidationService,
+        private invoiceService: InvoiceService) { }
 
-    async validateInvoice(req: Request, res: Response, next: NextFunction): Promise<any> {
+    async validateInvoice(req: any, res: Response, next: NextFunction): Promise<any> {
 
         const invoiceId = Array.isArray(req.params.invoiceId)
             ? req.params.invoiceId[0]
             : req.params.invoiceId;
 
-        const invoice = req.body;
+        const userId = req.user
 
         try {
+            const invoice = await this.invoiceService.fetchInvoiceById(invoiceId, userId); // fetch via invoice module
+            if (!invoice) {
+                return res.status(404).json({ error: 'Invoice not found' });
+            }
             const results = await this.validationService.runRules(invoice, invoiceId);
 
             res.status(200).json({
