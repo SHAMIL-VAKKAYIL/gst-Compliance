@@ -19,7 +19,11 @@ export class LLMService {
     const prompt = `Extract the following data from this invoice or receipt text. Respond with ONLY valid JSON, no markdown formatting, no explanation, no code fences.
 
 Top-level fields:
+
 - gstin: the seller's GST identification number (15-character alphanumeric code)
+- buyerGstin: the buyer's GSTIN, only present on B2B invoices where the buyer is a registered business.
+  Many invoices are B2C and will have no buyer GSTIN — that's expected, use null.
+  Only extract it if clearly attributable to the buyer/customer (e.g. under "Bill To"), do not guess.
 - invoiceNumber: the invoice or receipt number/ID
 - invoiceDate: the date in YYYY-MM-DD format
 - vendorName: the business or organization that issued this document (the seller, not the buyer)
@@ -61,6 +65,7 @@ ${rawText}
 
       return {
         gstin: parsed.gstin ?? null,
+        buyerGstin: parsed.buyerGstin ?? null,
         invoiceNumber: parsed.invoiceNumber ?? null,
         invoiceDate: parsed.invoiceDate ?? null,
         vendorName: parsed.vendorName ?? null,

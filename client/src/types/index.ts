@@ -33,6 +33,7 @@ export interface ExtractedInvoiceData {
   invoiceNumber: string
   vendorName: string
   gstin: string
+  buyerGstin: string | null
   invoiceDate: string | null
   tax: number
   amount: number
@@ -67,8 +68,8 @@ export interface AuthTokens {
   refreshToken: string
   userId: string
   isNewAccount?: boolean
-  isVerified:boolean
-  email:string
+  isVerified: boolean
+  email: string
 }
 
 export interface StoredInvoice {

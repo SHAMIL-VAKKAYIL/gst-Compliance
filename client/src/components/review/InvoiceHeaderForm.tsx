@@ -2,9 +2,9 @@ import type { ExtractedInvoiceData, ValidationMetrics } from '../../types'
 
 interface InvoiceHeaderFormProps {
   value: ExtractedInvoiceData
-  onChange?: (next: ExtractedInvoiceData) => void 
+  onChange?: (next: ExtractedInvoiceData) => void
   fieldValidation?: ValidationMetrics
-  readOnly : boolean
+  readOnly: boolean
 }
 
 export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }: InvoiceHeaderFormProps) {
@@ -12,14 +12,14 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
     onChange?.({ ...value, [key]: v })
   }
   console.log(value.invoiceDate);
-  
+
 
   function formatDate(isoString: string | null | undefined): string {
-  if (!isoString) return '—'
-  const date = new Date(isoString)
-  if (isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+    if (!isoString) return '—'
+    const date = new Date(isoString)
+    if (isNaN(date.getTime())) return '—'
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
 
   return (
     <section className="panel">
@@ -29,6 +29,10 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
           GSTIN
           <input value={value.gstin} onChange={(e) => patch('gstin', e.target.value)} />
         </label>
+        {value.buyerGstin && (<label>
+          Buyer GSTIN
+          <input value={value.buyerGstin} onChange={(e) => patch('gstin', e.target.value)} />
+        </label>)}
         <label className={fieldClass(fieldValidation?.invoiceNumberValid)}>
           Invoice number
           <input
@@ -39,8 +43,8 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
         </label>
         <label className={fieldClass(fieldValidation?.vendorValid)}>
           Vendor
-            readOnly={readOnly}
-          <input  value={value.vendorName} onChange={(e) => patch('vendorName', e.target.value)} />
+
+          <input readOnly={readOnly} value={value.vendorName} onChange={(e) => patch('vendorName', e.target.value)} />
         </label>
         <label className={fieldClass(fieldValidation?.dateValid)}>
           Invoice date
@@ -49,7 +53,7 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
             readOnly={readOnly}
 
             value={formatDate(value.invoiceDate)}
-            // onChange={(e) => patch('invoiceDate', e.target.value || null)}
+          // onChange={(e) => patch('invoiceDate', e.target.value || null)}
           />
         </label>
         <label>
@@ -71,7 +75,7 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
 
             step="0.01"
             value={value.amount ? value.amount : 0}
-            // onChange={(e) => patch('amount', Number(e.target.value))}
+          // onChange={(e) => patch('amount', Number(e.target.value))}
           />
         </label>
       </div>

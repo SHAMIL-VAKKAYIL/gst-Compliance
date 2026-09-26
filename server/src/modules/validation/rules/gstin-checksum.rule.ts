@@ -20,17 +20,37 @@ function isValidGstinChecksum(gstin: string): boolean {
   return gstin[14] === GSTIN_CODEPOINTS[checkCodePoint];
 }
 
-export const gstinChecksumRule: Rule = {
-  code: 'gstin_checksum_valid',
+function checkChecksum(gstin: string, label: string, ruleCode: string): RuleResult {
+  const normalized = gstin.toUpperCase();
+  const passed = isValidGstinChecksum(normalized);
+  return {
+    ruleCode,
+    passed,
+    severity: 'ERROR',
+    message: passed
+      ? `${label} GSTIN checksum is valid`
+      : `${label} GSTIN "${gstin}" fails checksum verification — likely mistyped or fabricated`
+  };
+}
+
+export const sellerGstinChecksumRule: Rule = {
+  code: 'seller_gstin_checksum_valid',
   evaluate(invoice: InvoiceForValidation): RuleResult {
-    const passed = isValidGstinChecksum(invoice.gstin.toUpperCase());
-    return {
-      ruleCode: this.code,
-      passed,
-      severity: 'ERROR',
-      message: passed
-        ? 'GSTIN checksum is valid'
-        : `GSTIN "${invoice.gstin}" fails checksum verification — likely mistyped or fabricated`
-    };
+    return checkChecksum(invoice.gstin, 'Seller', this.code);
+  }
+};
+
+export const buyerGstinChecksumRule: Rule = {
+  code: 'buyer_gstin_checksum_valid',
+  evaluate(invoice: InvoiceForValidation): RuleResult {
+    if (!invoice.buyerGstin) {
+      return {
+        ruleCode: this.code,
+        passed: true,
+        severity: 'ERROR',
+        message: 'No buyer GSTIN present (B2C invoice) — check not applicable'
+      };
+    }
+    return checkChecksum(invoice.buyerGstin, 'Buyer', this.code);
   }
 };

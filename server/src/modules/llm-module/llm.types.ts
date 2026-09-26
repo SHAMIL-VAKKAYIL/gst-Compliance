@@ -13,6 +13,7 @@ export interface LLMLineItem {
 
 export interface LLMExtractedData {
   gstin: string | null;
+  buyerGstin: string | null;
   invoiceNumber: string | null;
   invoiceDate: string | null; // YYYY-MM-DD
   vendorName: string | null;

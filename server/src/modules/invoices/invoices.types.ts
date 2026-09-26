@@ -3,6 +3,7 @@ export interface ExtractedInvoiceData {
   invoiceNumber: string;
   vendorName: string;
   gstin: string;
+  buyerGstin: string | null;
   invoiceDate: string | null;
   invoiceAmount: number;
   tax: number;

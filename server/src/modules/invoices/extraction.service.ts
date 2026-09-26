@@ -10,6 +10,7 @@ interface ValidationResult {
     dateValid: boolean;
     vendorValid: boolean;
     gstnValid: boolean;
+    buyerGstnValid: boolean;
     totalValid: boolean;
     validFieldCount: number;
 }
@@ -28,47 +29,7 @@ export class ExtractionService {
         this.ocrParser = new OCRParser();
     }
 
-    private validateExtractedData(data: ExtractedInvoiceData): ValidationResult {
-        const validation: ValidationResult = {
-            invoiceNumberValid: false,
-            dateValid: false,
-            vendorValid: false,
-            gstnValid: false,
-            totalValid: false,
-            validFieldCount: 0
-        };
 
-
-        if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && data.invoiceNumber.trim().length >= 3) {
-            validation.invoiceNumberValid = true;
-        }
-
-        if (data.invoiceDate) {
-            const dateParts = data.invoiceDate.split('-');
-            const year = Number(dateParts[0]);
-            if (year >= 2015 && year <= new Date().getFullYear()) {
-                validation.dateValid = true;
-            }
-        }
-
-        if (data.vendorName && data.vendorName !== 'UNKNOWN' && data.vendorName.length >= 3) {
-            validation.vendorValid = true;
-        }
-
-        if (data.gstin && data.gstin !== 'UNKNOWN' && data.gstin.trim().length === 15) {
-            validation.gstnValid = true;
-        }
-
-        if (data.totalAmount && data.totalAmount > 0) {
-            validation.totalValid = true;
-        }
-
-        validation.validFieldCount = Object.entries(validation)
-            .filter(([key, value]) => key !== 'validFieldCount' && value === true)
-            .length;
-
-        return validation;
-    }
 
     async extractFromBuffer(fileBuffer: Buffer, fileName: string, userId: string): Promise<ExtractionResult> {
         try {
@@ -142,6 +103,7 @@ export class ExtractionService {
             invoiceNumber: llmResult.invoiceNumber ?? 'UNKNOWN',
             vendorName: llmResult.vendorName ?? 'UNKNOWN',
             gstin: llmResult.gstin ?? 'UNKNOWN',
+            buyerGstin: llmResult.buyerGstin,
             invoiceDate: llmResult.invoiceDate,
             invoiceAmount: llmResult.amount ?? 0,
             tax: 0,
@@ -168,14 +130,11 @@ export class ExtractionService {
             extractionStatus = 'FAILED';
             failureReason = 'MISSING_REQUIRED_FIELDS';
             shouldSave = false;
-        }else if (!validation.dateValid) {
+        } else if (!validation.dateValid) {
             extractionStatus = 'FAILED';
             failureReason = 'MISSING_REQUIRED_FIELDS';
             shouldSave = false;
-        } else if (!validation.totalValid) {
-            extractionStatus = 'NEEDS_CORRECTION';
-            shouldSave = true;
-        } else {
+        }else {
             extractionStatus = 'COMPLETE';
             shouldSave = true;
         }
@@ -202,6 +161,51 @@ export class ExtractionService {
             confidence: extractionResult.confidence,
             validationResults: validation
         };
+    }
+    private validateExtractedData(data: ExtractedInvoiceData): ValidationResult {
+        const validation: ValidationResult = {
+            invoiceNumberValid: false,
+            dateValid: false,
+            vendorValid: false,
+            gstnValid: false,
+            buyerGstnValid: false,
+            totalValid: false,
+            validFieldCount: 0
+        };
+
+
+        if (data.invoiceNumber && data.invoiceNumber !== 'UNKNOWN' && data.invoiceNumber.trim().length >= 3) {
+            validation.invoiceNumberValid = true;
+        }
+
+        if (data.invoiceDate) {
+            const dateParts = data.invoiceDate.split('-');
+            const year = Number(dateParts[0]);
+            if (year >= 2015 && year <= new Date().getFullYear()) {
+                validation.dateValid = true;
+            }
+        }
+
+        if (data.vendorName && data.vendorName !== 'UNKNOWN' && data.vendorName.length >= 3) {
+            validation.vendorValid = true;
+        }
+
+        if (data.gstin && data.gstin !== 'UNKNOWN' && data.gstin.trim().length === 15) {
+            validation.gstnValid = true;
+        }
+        if (data.buyerGstin && data.buyerGstin !== 'UNKNOWN' && data.buyerGstin.trim().length === 15) {
+            validation.buyerGstnValid = true;
+        }
+
+        if (data.totalAmount && data.totalAmount > 0) {
+            validation.totalValid = true;
+        }
+
+        validation.validFieldCount = Object.entries(validation)
+            .filter(([key, value]) => key !== 'validFieldCount' && value === true)
+            .length;
+
+        return validation;
     }
 }
 

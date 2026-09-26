@@ -12,6 +12,7 @@ export interface RuleResult {
 
 export interface InvoiceForValidation {
     gstin: string;
+    buyerGstin: string | null;
     invoiceNumber: string | null;
     vendorName: string | null;
     invoiceDate: Date | null;

@@ -1,5 +1,5 @@
-import { gstinFormatRule } from './rules/gstin-format.rule';
-import { gstinChecksumRule } from './rules/gstin-checksum.rule';
+import { buyerGstinFormatRule, sellerGstinFormatRule } from './rules/gstin-format.rule';
+import { buyerGstinChecksumRule, sellerGstinChecksumRule } from './rules/gstin-checksum.rule';
 import { Rule, RuleResult, InvoiceForValidation, SummaryResult } from './validation.types';
 import { ValidationRepository } from './validation.repository';
 import { lineItemsSumRule } from './rules/line-items-sum.rule';
@@ -19,19 +19,24 @@ export class ValidationService {
     const runAt = new Date();
     const results: RuleResult[] = [];
 
-    const formatResult = gstinFormatRule.evaluate(invoice);
-    results.push(formatResult);
+    // Format checks — independent, always run
+    const sellerFormatResult = sellerGstinFormatRule.evaluate(invoice);
+    const buyerFormatResult = buyerGstinFormatRule.evaluate(invoice);
+    results.push(sellerFormatResult);
+    results.push(buyerFormatResult);
 
-    // Only run checksum if format already passed — checksum math is meaningless
-    // on a string that's already the wrong shape
-    if (formatResult.passed) {
-      results.push(gstinChecksumRule.evaluate(invoice));
-      results.push(lineItemsSumRule.evaluate(invoice));
-      results.push(perLineTaxCalculationRule.evaluate(invoice));
+
+    if (sellerFormatResult.passed) {
+      results.push(sellerGstinChecksumRule.evaluate(invoice));
     }
-    
-    results.push(validateFutureDate.evaluate(invoice))
-    results.push(hsnRateValidationRule.evaluate(invoice))
+    if (buyerFormatResult.passed) {
+      results.push(buyerGstinChecksumRule.evaluate(invoice));
+    }
+
+    results.push(lineItemsSumRule.evaluate(invoice));
+    results.push(perLineTaxCalculationRule.evaluate(invoice));
+    results.push(hsnRateValidationRule.evaluate(invoice));
+    results.push(validateFutureDate.evaluate(invoice));
 
     await this.validationRepository.saveResults(invoiceId, runAt, results);
     return results;
