@@ -52,7 +52,7 @@ export class InvoicesController {
             if (!userId) {
                 return res.status(401).json({ success: false, error: 'Authentication required' });
             }
-            const summary = await this.invoiceService.fetchSummary(invoiceId);
+            const summary = await this.invoiceService.fetchSummary(invoiceId, userId);
 
             return res.status(200).json(summary);
 

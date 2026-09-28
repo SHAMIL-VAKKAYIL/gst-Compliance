@@ -1,4 +1,5 @@
 import { AppError } from "../../shared/errors/app-error";
+import { logger } from "../../shared/utils/logger";
 import { InvoiceRepository } from "./invoices.repository";
 
 
@@ -12,11 +13,7 @@ export class InvoiceService {
         try {
             return await this.invoiceRepository.getInvoiceById(invoiceId, userId);
         } catch (error) {
-            console.log(error);
-
-            if (error instanceof AppError) {
-                throw error;
-            }
+            logger.error({ err: error }, 'Failed to retrieve invoice');
             throw new AppError('Failed to retrieve invoice');
         }
     }
@@ -24,15 +21,19 @@ export class InvoiceService {
         try {
             return await this.invoiceRepository.getInvoices(userId);
         } catch (error) {
+            logger.error({ err: error }, 'Failed to retrieve invoices');
+
             throw new AppError('Failed to retrieve invoice');
         }
     }
-    async fetchSummary(invoiceId:string) {
+    async fetchSummary(invoiceId: string, userId: string) {
         try {
-                return await this.invoiceRepository.fetchSummary(invoiceId)
+            return await this.invoiceRepository.fetchSummary(invoiceId, userId)
         } catch (error) {
-            throw new AppError('Failed to retrieve summary');
+            logger.error({err:error},'Failed to retrieve summary');
             
+            throw new AppError('Failed to retrieve summary');
+
         }
     }
 }

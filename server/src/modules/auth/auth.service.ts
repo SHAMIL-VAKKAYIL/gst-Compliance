@@ -5,6 +5,7 @@ import { AuthRepository } from "./auth.repository";
 import { TokenService } from "../../shared/utils/token.service";
 import { AppError } from "../../shared/errors/app-error";
 import { EmailService } from "./email.service";
+import { logger } from "../../shared/utils/logger";
 
 export class OauthService {
     private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -20,7 +21,7 @@ export class OauthService {
             const ticket = await this.googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
             payload = ticket.getPayload();
         } catch (error) {
-            console.error('Error verifying Google ID token:', error);
+            logger.error({ err: error }, 'Error verifying Google ID token:');
             throw new AppError('Invalid Google token');
         }
 
@@ -76,19 +77,26 @@ export class AuthService {
     }
 
     async login(email: string, password: string) {
-        const user = await this.authRepository.findByEmail(email);
+        try {
 
-        if (!user?.password) {
-            throw new AppError('User not found');
+            const user = await this.authRepository.findByEmail(email);
+
+            if (!user?.password) {
+                throw new AppError('User not found');
+            }
+
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+            if (!isPasswordValid) {
+                throw new AppError('Invalid password');
+            }
+
+            const tokens = this.tokenService.issueTokens(user.id);
+            return { ...tokens, userId: user.id, email: user.email, isVerified: user.emailVerified };
+        } catch (error) {
+            logger.error({ err: error }, 'faild to login ')
+
+            throw new AppError('faild to login ');
         }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            throw new AppError('Invalid password');
-        }
-
-        const tokens = this.tokenService.issueTokens(user.id);
-        return { ...tokens, userId: user.id, email: user.email, isVerified: user.emailVerified };
     }
     async storeToken(email: string, userId: string) {
         try {
@@ -98,7 +106,9 @@ export class AuthService {
             await this.emailService.sendVerificationEmail(email, token)
 
         } catch (error) {
-            throw new AppError('Invalid tpoken');
+            logger.error({ err: error }, 'invalid token')
+
+            throw new AppError('Invalid token');
 
         }
     }
@@ -108,13 +118,14 @@ export class AuthService {
 
             const record = await this.authRepository.findVerificationToken(token);
             if (!record || record.expiresAt < new Date()) {
-                throw new Error('Invalid or expired token');
+                throw new AppError('Invalid or expired token');
             }
 
             await this.authRepository.markEmailVerified(record.userId);
             return { message: 'Email verified', verified: true };
         } catch (error) {
-            throw new Error('Invalid token');
+            logger.error({ err: error }, 'invalid token')
+            throw new AppError('Invalid token');
         }
     }
 }

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AppError } from '../../shared/errors/app-error';
 import { LLMExtractedData, RuleResult } from './llm.types';
+import { logger } from '../../shared/utils/logger';
 
 
 
@@ -62,7 +63,6 @@ ${rawText}
       if (!raw) return null;
 
       const parsed = JSON.parse(raw);
-      console.log(parsed);
 
       return {
         gstin: parsed.gstin ?? null,
@@ -74,7 +74,7 @@ ${rawText}
         lineItems: Array.isArray(parsed.lineItems) ? parsed.lineItems : [],
       };
     } catch (error) {
-      console.error('[LLMExtractionService] extraction failed:', error);
+      logger.error({ err: error }, '[LLMExtractionService] extraction failed:');
       return null;
     }
   }
@@ -98,7 +98,7 @@ ${rawText}
       return { invoiceId, summary }
 
     } catch (error) {
-      console.log(error);
+      logger.error({ err: error }, 'failed generate summary');
       throw new AppError('failed generate summary')
 
     }

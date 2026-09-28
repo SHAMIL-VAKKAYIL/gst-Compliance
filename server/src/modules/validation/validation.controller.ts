@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ValidationService } from "./validaton.service";
 import { InvoiceService } from "../invoices/invoices.service";
+import { logger } from "../../shared/utils/logger";
 
 export class ValidationController {
 
@@ -29,24 +30,24 @@ export class ValidationController {
             await this.validationService.generateAndSummary(invoiceId, invoice, results)
         } catch (error) {
 
-            console.error('Error during invoice validation:', error);
+            logger.error({err:error},'Error during invoice validation:');
             next(error);
         }
     }
 
-    async getReviewById(req: Request, res: Response, next: NextFunction): Promise<any> {
-        const invoiceId = Array.isArray(req.params.invoiceId)
-            ? req.params.invoiceId[0]
-            : req.params.invoiceId;
+    // async getReviewById(req: Request, res: Response, next: NextFunction): Promise<any> {
+    //     const invoiceId = Array.isArray(req.params.invoiceId)
+    //         ? req.params.invoiceId[0]
+    //         : req.params.invoiceId;
 
-        try {
+    //     try {
 
-            const result = await this.validationService.getReviewById(invoiceId);
+    //         const result = await this.validationService.getReviewById(invoiceId);
 
-            res.status(200).json({ data: result })
-        } catch (error) {
-            console.error('Error during invoice validation:', error);
-            next(error);
-        }
-    }
+    //         res.status(200).json({ data: result })
+    //     } catch (error) {
+    //         console.error('Error during invoice validation:', error);
+    //         next(error);
+    //     }
+    // }
 }

@@ -2,6 +2,7 @@
 import { ExtractedInvoiceData } from './invoices.types';
 import { prisma } from '../../prisma/client';
 import { AppError } from '../../shared/errors/app-error';
+import { logger } from '../../shared/utils/logger';
 
 export class InvoiceRepository {
 
@@ -11,7 +12,6 @@ export class InvoiceRepository {
     extractionStatus: 'COMPLETE' | 'NEEDS_CORRECTION' | 'FAILED' = 'COMPLETE',
   ): Promise<any> {
     try {
-      console.log(userId, '3432423');
 
 
       const invoice = await prisma.invoice.create({
@@ -19,7 +19,7 @@ export class InvoiceRepository {
           userId,
           gstin: invoiceData.gstin,
           buyerGstin: invoiceData.buyerGstin,
-          tax:invoiceData.tax,
+          tax: invoiceData.tax,
           invoiceNumber: invoiceData.invoiceNumber,
           invoiceDate: invoiceData.invoiceDate ? new Date(invoiceData.invoiceDate) : null,
           vendorName: invoiceData.vendorName,
@@ -52,6 +52,7 @@ export class InvoiceRepository {
         extractionStatus,
       };
     } catch (error) {
+      logger.error({ err: error }, 'Failed to save invoice')
       throw new AppError(`Failed to save invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -73,6 +74,8 @@ export class InvoiceRepository {
         },
       });
     } catch (error) {
+      logger.error({ err: error }, 'Failed to retrieve invoice')
+
       throw new AppError(`Failed to retrieve invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -81,32 +84,23 @@ export class InvoiceRepository {
     try {
       return await prisma.invoice.findMany({ where: { userId: userId } })
     } catch (error) {
+      logger.error({ err: error }, 'Failed to retrieve invoice')
       throw new AppError(`Failed to retrieve invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
     }
   }
 
-  async fetchSummary(invoiceId: string) {
+  async fetchSummary(invoiceId: string, userId: string) {
     try {
       return await prisma.invoice.findFirst({
-        where: { id: invoiceId }, select: {
-          summary: true,
-          summaryStatus: true
-        }
-      })
+        where: { id: invoiceId, userId },
+        select: { summary: true, summaryStatus: true },
+      });
     } catch (error) {
-      throw new AppError(`Failed to retrieve summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
-
+      logger.error({ err: error, invoiceId }, 'Failed to retrieve summary');
+      throw new AppError('Failed to retrieve summary');
     }
   }
 
-  async updateInvoice(invoiceId: string, updateData: Partial<ExtractedInvoiceData>): Promise<any> {
-    // update only for amount
-    try {
-      console.log(`Updating invoice ${invoiceId}:`, updateData);
-      return { id: invoiceId, ...updateData };
-    } catch (error) {
-      throw new AppError(`Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
+
 }

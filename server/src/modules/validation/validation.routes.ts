@@ -20,10 +20,9 @@ const validationSvc = new ValidationService(validationRepo, llmSvc);
 const validatationCtrl = new ValidationController(validationSvc, invoiceSvc);
 
 
-router.post('/validate/:invoiceId', validatationCtrl.validateInvoice.bind(validatationCtrl));
+router.post('/validate/:invoiceId', requireAuth, validatationCtrl.validateInvoice.bind(validatationCtrl));
 
-router.get('/review/:invoiceId', requireAuth, validatationCtrl.getReviewById.bind(validatationCtrl))
-// POST /api/invoice/v1/validate/:id
+// router.get('/review/:invoiceId', requireAuth, validatationCtrl.getReviewById.bind(validatationCtrl))
 
 
 export default router;

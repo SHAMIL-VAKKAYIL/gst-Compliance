@@ -1,5 +1,6 @@
 import { prisma } from "../../prisma/client";
 import { AppError } from "../../shared/errors/app-error";
+import { logger } from "../../shared/utils/logger";
 
 export class AuthRepository {
 
@@ -50,6 +51,8 @@ export class AuthRepository {
                 },
             });
         } catch (error) {
+            logger.error({err:error},'Token already exists')
+            
             throw new AppError("Token already exists", 409);
         }
     }
@@ -58,6 +61,8 @@ export class AuthRepository {
             return await prisma.verificationToken.findUnique({ where: { token } })
 
         } catch (error) {
+            logger.error({err:error},'Token did not exists')
+
             throw new AppError("Token did not exists", 409);
 
         }
@@ -70,6 +75,7 @@ export class AuthRepository {
                 data: { emailVerified: true }
             })
         } catch (error) {
+            logger.error({err:error},'user not found')
             throw new AppError("user not found", 409);
 
         }
