@@ -1,6 +1,7 @@
-import hsnPkg from 'hsn-code-package';
+import hsn from 'hsn-code-package';
 import { InvoiceForValidation, Rule, RuleResult } from '../validation.types';
-const hsn = hsnPkg.default ?? hsnPkg;
+import { toNumber } from '../../../shared/utils/number';
+// const hsn = hsnPkg.default ?? hsnPkg;
 
 interface RateLookupResult {
     rate: number | null;
@@ -12,20 +13,6 @@ function isServiceCode(code: string): boolean {
     return code.startsWith('99');
 }
 
-function toNumber(value: unknown): number | null {
-    if (value === null || value === undefined) return null;
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? null : parsed;
-    }
-    // Prisma Decimal (and anything else with toNumber/toString)
-    if (typeof value === 'object' && typeof (value as any).toNumber === 'function') {
-        return (value as any).toNumber();
-    }
-    const coerced = Number(value);
-    return isNaN(coerced) ? null : coerced;
-}
 
 function lookupHsnRate(code: string): RateLookupResult {
     // exact 8-digit match — highest confidence
