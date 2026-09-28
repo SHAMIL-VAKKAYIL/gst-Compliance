@@ -7,19 +7,21 @@ export class ValidationRepository {
 
 
 
-  async saveResults(invoiceId: string, runAt: Date, results: RuleResult[]) {
-    await prisma.validationResult.createMany({
-      data: results.map(r => ({
+async saveResults(invoiceId: string, runAt: Date, results: RuleResult[]) {
+  await prisma.$transaction([
+    prisma.validationResult.deleteMany({ where: { invoiceId } }),
+    prisma.validationResult.createMany({
+      data: results.map((r) => ({
         invoiceId,
         runAt,
         ruleCode: r.ruleCode,
         passed: r.passed,
         severity: r.severity,
-        message: r.message
-      }))
-    });
-  }
-
+        message: r.message,
+      })),
+    }),
+  ]);
+}
   async getReviewById(InvoiceId: string) {
 
     const review = await prisma.validationResult.findFirst({ where: { invoiceId: InvoiceId } })
