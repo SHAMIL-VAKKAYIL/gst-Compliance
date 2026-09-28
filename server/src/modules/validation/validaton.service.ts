@@ -1,6 +1,6 @@
 import { buyerGstinFormatRule, sellerGstinFormatRule } from './rules/gstin-format.rule';
 import { buyerGstinChecksumRule, sellerGstinChecksumRule } from './rules/gstin-checksum.rule';
-import { Rule, RuleResult, InvoiceForValidation, SummaryResult } from './validation.types';
+import { RuleResult, InvoiceForValidation, SummaryResult } from './validation.types';
 import { ValidationRepository } from './validation.repository';
 import { lineItemsSumRule } from './rules/line-items-sum.rule';
 import { perLineTaxCalculationRule } from './rules/per-line-tax.rule';
@@ -8,6 +8,7 @@ import { LLMService } from '../llm-module/llm.service';
 import { AppError } from '../../shared/errors/app-error';
 import { validateFutureDate } from './rules/future-date-check';
 import { hsnRateValidationRule } from './rules/hsn-code-validation';
+import { stateConsistencyRule } from './rules/state-consistency.rule';
 
 export class ValidationService {
   constructor(
@@ -37,6 +38,7 @@ export class ValidationService {
     results.push(perLineTaxCalculationRule.evaluate(invoice));
     results.push(hsnRateValidationRule.evaluate(invoice));
     results.push(validateFutureDate.evaluate(invoice));
+    results.push(stateConsistencyRule.evaluate(invoice));
 
     await this.validationRepository.saveResults(invoiceId, runAt, results);
     return results;
