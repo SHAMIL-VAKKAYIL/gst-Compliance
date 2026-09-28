@@ -19,6 +19,7 @@ export class InvoiceRepository {
           userId,
           gstin: invoiceData.gstin,
           buyerGstin: invoiceData.buyerGstin,
+          tax:invoiceData.tax,
           invoiceNumber: invoiceData.invoiceNumber,
           invoiceDate: invoiceData.invoiceDate ? new Date(invoiceData.invoiceDate) : null,
           vendorName: invoiceData.vendorName,

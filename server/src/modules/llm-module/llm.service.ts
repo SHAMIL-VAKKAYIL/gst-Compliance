@@ -62,6 +62,7 @@ ${rawText}
       if (!raw) return null;
 
       const parsed = JSON.parse(raw);
+      console.log(parsed);
 
       return {
         gstin: parsed.gstin ?? null,

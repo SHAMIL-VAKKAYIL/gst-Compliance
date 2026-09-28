@@ -1,9 +1,10 @@
 import { InvoiceRepository } from './invoices.repository';
 import { PDFParser } from './pdf-parser/pdf-parser';
 import { OCRParser } from './ocr-parser/ocr-parser';
-import { ExtractionResult, ExtractedInvoiceData } from './invoices.types';
+import { ExtractionResult, ExtractedInvoiceData, LineItem } from './invoices.types';
 import { FileTypeDetector } from '../../shared/utils/file-type-detector';
 import { LLMService } from '../llm-module/llm.service';
+import { toNumber } from '../../shared/utils/number';
 
 interface ValidationResult {
     invoiceNumberValid: boolean;
@@ -28,8 +29,16 @@ export class ExtractionService {
         this.pdfParser = new PDFParser();
         this.ocrParser = new OCRParser();
     }
+    calculateTotalTax(lineItems: LineItem[] | undefined): number {
+        if (!lineItems || lineItems.length === 0) return 0;
 
-
+        return lineItems.reduce((total, item) => {
+            const igst = toNumber(item.igstAmount) ?? 0;
+            const cgst = toNumber(item.cgstAmount) ?? 0;
+            const sgst = toNumber(item.sgstAmount) ?? 0;
+            return total + igst + cgst + sgst;
+        }, 0);
+    }
 
     async extractFromBuffer(fileBuffer: Buffer, fileName: string, userId: string): Promise<ExtractionResult> {
         try {
@@ -87,81 +96,7 @@ export class ExtractionService {
         }
     }
 
-    private async processExtraction(extractionResult: ExtractionResult, userId?: string): Promise<ExtractionResult> {
-        const llmResult = await this.LLMService.extractAll(extractionResult.rawText || '');
 
-        if (!llmResult) {
-            return {
-                success: false,
-                extractionStatus: 'FAILED',
-                failureReason: 'UNREADABLE_SCAN',
-                error: 'Unable to extract invoice data from the document'
-            };
-        }
-
-        const extractedData: ExtractedInvoiceData = {
-            invoiceNumber: llmResult.invoiceNumber ?? 'UNKNOWN',
-            vendorName: llmResult.vendorName ?? 'UNKNOWN',
-            gstin: llmResult.gstin ?? 'UNKNOWN',
-            buyerGstin: llmResult.buyerGstin,
-            invoiceDate: llmResult.invoiceDate,
-            invoiceAmount: llmResult.amount ?? 0,
-            tax: 0,
-            totalAmount: llmResult.amount ?? 0,
-            lineItems: llmResult.lineItems
-        };
-        const validation = this.validateExtractedData(extractedData);
-        extractionResult.data = extractedData;
-
-        let extractionStatus: 'COMPLETE' | 'FAILED' | 'NEEDS_CORRECTION';
-
-        let failureReason: string | null = null;
-
-        let shouldSave = true;
-
-        // console.log('final validation results:', validation);
-
-
-        if (validation.validFieldCount === 0) {
-            extractionStatus = 'FAILED';
-            failureReason = 'UNREADABLE_SCAN';
-            shouldSave = false;
-        } else if (!validation.gstnValid) {
-            extractionStatus = 'FAILED';
-            failureReason = 'MISSING_REQUIRED_FIELDS';
-            shouldSave = false;
-        } else if (!validation.dateValid) {
-            extractionStatus = 'FAILED';
-            failureReason = 'MISSING_REQUIRED_FIELDS';
-            shouldSave = false;
-        }else {
-            extractionStatus = 'COMPLETE';
-            shouldSave = true;
-        }
-
-        if (!shouldSave) {
-            return {
-                success: false,
-                extractionStatus,
-                failureReason,
-                error: `Extraction failed: ${failureReason}`
-            };
-        }
-
-        const savedInvoice = await this.invoiceRepository.saveExtractedInvoice(
-            extractionResult.data!,
-            userId ?? 'unknown-user',
-            extractionStatus,
-        );
-
-        return {
-            success: true,
-            extractionStatus: 'COMPLETE',
-            data: savedInvoice,
-            confidence: extractionResult.confidence,
-            validationResults: validation
-        };
-    }
     private validateExtractedData(data: ExtractedInvoiceData): ValidationResult {
         const validation: ValidationResult = {
             invoiceNumberValid: false,
@@ -190,10 +125,14 @@ export class ExtractionService {
             validation.vendorValid = true;
         }
 
-        if (data.gstin && data.gstin !== 'UNKNOWN' && data.gstin.trim().length === 15) {
+        console.log(data.gstin, 'o');
+
+        if (data.gstin && data.gstin !== 'UNKNOWN') {
+            console.log(data.gstin, 'i');
+
             validation.gstnValid = true;
         }
-        if (data.buyerGstin && data.buyerGstin !== 'UNKNOWN' && data.buyerGstin.trim().length === 15) {
+        if (data.buyerGstin && data.buyerGstin !== 'UNKNOWN') {
             validation.buyerGstnValid = true;
         }
 
@@ -207,5 +146,86 @@ export class ExtractionService {
 
         return validation;
     }
+
+
+    private async processExtraction(extractionResult: ExtractionResult, userId?: string): Promise<ExtractionResult> {
+        const llmResult = await this.LLMService.extractAll(extractionResult.rawText || '');
+
+        if (!llmResult) {
+            return {
+                success: false,
+                extractionStatus: 'FAILED',
+                failureReason: 'UNREADABLE_SCAN',
+                error: 'Unable to extract invoice data from the document'
+            };
+        }
+        console.log(llmResult, 'llm');
+
+        const extractedData: ExtractedInvoiceData = {
+            invoiceNumber: llmResult.invoiceNumber ?? 'UNKNOWN',
+            vendorName: llmResult.vendorName ?? 'UNKNOWN',
+            gstin: llmResult.gstin ?? 'UNKNOWN',
+            buyerGstin: llmResult.buyerGstin,
+            invoiceDate: llmResult.invoiceDate,
+            invoiceAmount: llmResult.amount ?? 0,
+            tax: this.calculateTotalTax(llmResult.lineItems),
+            totalAmount: llmResult.amount ?? 0,
+            lineItems: llmResult.lineItems
+        };
+        console.log(extractedData, 'extracted after llm');
+
+        const validation = this.validateExtractedData(extractedData);
+        extractionResult.data = extractedData;
+
+        let extractionStatus: 'COMPLETE' | 'FAILED' | 'NEEDS_CORRECTION';
+
+        let failureReason: string | null = null;
+
+        let shouldSave = true;
+
+        console.log('final validation results:', validation);
+
+
+        if (validation.validFieldCount === 0) {
+            extractionStatus = 'FAILED';
+            failureReason = 'UNREADABLE_SCAN';
+            shouldSave = false;
+        } else if (!validation.gstnValid) {
+            extractionStatus = 'FAILED';
+            failureReason = 'MISSING_REQUIRED_FIELDS';
+            shouldSave = false;
+        } else if (!validation.dateValid) {
+            extractionStatus = 'FAILED';
+            failureReason = 'MISSING_REQUIRED_FIELDS';
+            shouldSave = false;
+        } else {
+            extractionStatus = 'COMPLETE';
+            shouldSave = true;
+        }
+
+        if (!shouldSave) {
+            return {
+                success: false,
+                extractionStatus,
+                failureReason,
+                error: `Extraction failed: ${failureReason}`
+            };
+        }
+
+        const savedInvoice = await this.invoiceRepository.saveExtractedInvoice(
+            extractionResult.data!,
+            userId ?? 'unknown-user',
+            extractionStatus,
+        );
+
+        return {
+            success: true,
+            extractionStatus: 'COMPLETE',
+            data: savedInvoice,
+            confidence: extractionResult.confidence,
+            validationResults: validation
+        };
+    }
+
 }
 

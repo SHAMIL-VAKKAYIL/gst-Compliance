@@ -43,7 +43,6 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
         </label>
         <label className={fieldClass(fieldValidation?.vendorValid)}>
           Vendor
-
           <input readOnly={readOnly} value={value.vendorName} onChange={(e) => patch('vendorName', e.target.value)} />
         </label>
         <label className={fieldClass(fieldValidation?.dateValid)}>
@@ -63,7 +62,7 @@ export function InvoiceHeaderForm({ value, onChange, fieldValidation, readOnly }
             readOnly={readOnly}
 
             step="0.01"
-            value={Number.isFinite(value.tax) ? value.tax : 0}
+            value={value.tax ? value.tax : 0}
             onChange={(e) => patch('tax', Number(e.target.value))}
           />
         </label>
