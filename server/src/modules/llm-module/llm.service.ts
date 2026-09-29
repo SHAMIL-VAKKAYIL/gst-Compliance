@@ -42,6 +42,8 @@ Line items: extract every line item row from any itemized table in the document,
 - sgstAmount: SGST amount for this line, if applicable (intra-state transactions)
 - lineTotal: the tax-inclusive total for this line
 
+Copy GSTINs, PAN numbers, and invoice numbers exactly as they appear on the document, character for character. 
+Do not correct, complete, or normalize them even if they look malformed or incomplete.
 If a field cannot be confidently found, use null for that field. If there are no line items, return an empty array. Do not guess or invent values.
 
 Text:

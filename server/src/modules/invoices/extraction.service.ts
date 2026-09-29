@@ -5,6 +5,7 @@ import { ExtractionResult, ExtractedInvoiceData, LineItem } from './invoices.typ
 import { FileTypeDetector } from '../../shared/utils/file-type-detector';
 import { LLMService } from '../llm-module/llm.service';
 import { toNumber } from '../../shared/utils/number';
+import { logger } from '../../shared/utils/logger';
 
 interface ValidationResult {
     invoiceNumberValid: boolean;
@@ -59,7 +60,7 @@ export class ExtractionService {
                 fileType === 'pdf' &&
                 (!initialResult.rawText || initialResult.rawText.trim().length < MINIMUM_MEANINGFUL_LENGTH)
             ) {
-                console.log('fallaback');
+
                 return {
                     success: false,
                     extractionStatus: 'FAILED',
@@ -86,7 +87,7 @@ export class ExtractionService {
 
             return this.processExtraction(initialResult, userId);
         } catch (error) {
-            console.error('[ExtractionService] OCR fallback failed:', error);
+            logger.error({ err: error, userId, fileName }, 'extraction failed');
             return {
                 success: false,
                 extractionStatus: 'FAILED',
@@ -125,10 +126,8 @@ export class ExtractionService {
             validation.vendorValid = true;
         }
 
-        console.log(data.gstin, 'o');
 
         if (data.gstin && data.gstin !== 'UNKNOWN') {
-            console.log(data.gstin, 'i');
 
             validation.gstnValid = true;
         }
@@ -159,7 +158,6 @@ export class ExtractionService {
                 error: 'Unable to extract invoice data from the document'
             };
         }
-        console.log(llmResult, 'llm');
 
         const extractedData: ExtractedInvoiceData = {
             invoiceNumber: llmResult.invoiceNumber ?? 'UNKNOWN',
@@ -172,7 +170,6 @@ export class ExtractionService {
             totalAmount: llmResult.amount ?? 0,
             lineItems: llmResult.lineItems
         };
-        console.log(extractedData, 'extracted after llm');
 
         const validation = this.validateExtractedData(extractedData);
         extractionResult.data = extractedData;
@@ -183,7 +180,6 @@ export class ExtractionService {
 
         let shouldSave = true;
 
-        console.log('final validation results:', validation);
 
 
         if (validation.validFieldCount === 0) {
