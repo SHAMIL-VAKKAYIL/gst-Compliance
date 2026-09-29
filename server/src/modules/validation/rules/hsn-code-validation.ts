@@ -101,12 +101,13 @@ export const hsnRateValidationRule: Rule = {
         // decide deliberately: does "unverified" fail the rule, or pass with a warning severity?
         const hasHardMismatch = issues.some(i => i.includes('charged'));
         const passed = !hasHardMismatch;
+        const uniqueIssues = [...new Set(issues)];
 
         return {
             ruleCode: this.code,
             passed,
             severity: hasHardMismatch ? 'ERROR' : (anyUnverified ? 'WARNING' : 'ERROR'),
-            message: issues.length > 0 ? issues.join('; ') : 'All HSN/SAC codes and rates verified'
+            message: uniqueIssues.length > 0 ? uniqueIssues.join('; ') : 'All HSN/SAC codes and rates verified'
         };
     }
 }
