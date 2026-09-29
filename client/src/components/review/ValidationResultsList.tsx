@@ -41,8 +41,12 @@ export function ValidationResultsList({
             <li key={r.ruleCode} className={r.passed ? 'rule-pass' : 'rule-fail'}>
               <div className="rule-top">
                 <strong>{r.ruleCode}</strong>
-                <span className={`badge ${r.passed ? 'badge-ok' : 'badge-bad'}`}>
-                  {r.passed ? 'Passed' : r.severity}
+                <span
+                  className={`badge ${r.severity === 'WARNING' ? 'badge-warning' :
+                      r.passed ? 'badge-ok' : 'badge-bad'
+                    }`}
+                >
+                  {r.severity === 'WARNING' ? 'Warning' : r.passed ? 'Passed' : r.severity}
                 </span>
               </div>
               <p>{r.message}</p>

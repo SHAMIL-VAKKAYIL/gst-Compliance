@@ -365,7 +365,10 @@ input:focus {
   background: var(--danger-soft);
   color: var(--danger);
 }
-
+.badge-warning{
+    background: var(--warn-soft);
+  color: var(--warn);
+}
 .status-COMPLETE {
   background: var(--ok-soft);
   color: var(--ok);
