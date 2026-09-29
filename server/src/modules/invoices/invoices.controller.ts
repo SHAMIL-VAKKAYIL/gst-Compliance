@@ -14,7 +14,7 @@ export class InvoicesController {
             const invoiceId = req.params.invoiceId;
             const userId = req.user?.userId;
 
-
+            
             if (!userId) {
                 return res.status(401).json({ success: false, error: 'Authentication required' });
             }

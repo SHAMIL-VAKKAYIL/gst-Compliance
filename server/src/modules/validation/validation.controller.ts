@@ -14,7 +14,7 @@ export class ValidationController {
             ? req.params.invoiceId[0]
             : req.params.invoiceId;
 
-        const userId = req.user
+        const userId = req.user?.userId;
 
         try {
             const invoice = await this.invoiceService.fetchInvoiceById(invoiceId, userId); // fetch via invoice module
@@ -30,7 +30,7 @@ export class ValidationController {
             await this.validationService.generateAndSummary(invoiceId, invoice, results)
         } catch (error) {
 
-            logger.error({err:error},'Error during invoice validation:');
+            logger.error({ err: error }, 'Error during invoice validation:');
             next(error);
         }
     }
