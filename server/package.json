@@ -10,7 +10,8 @@
     "generate": "prisma generate",
     "studio": "prisma studio",
     "dev": "tsx watch src/server.ts",
-    "start": "node dist/server.js",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
     "build": "tsc"
   },
   "keywords": [],
@@ -35,6 +36,7 @@
     "pino-http": "^11.0.0",
     "prisma": "7.10.0",
     "resend": "^6.28.1",
+    "tsx": "^4.23.13",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
