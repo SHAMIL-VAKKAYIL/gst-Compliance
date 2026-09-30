@@ -9,10 +9,12 @@ import validateRouter from './modules/validation/validation.routes'
 import { AppError } from './shared/errors/app-error';
 import { logger } from './shared/utils/logger';
 
+import 'dotenv/config'
+
 const app = express();
 
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL,
     credentials: true,
 }));
 app.use(express.json());
