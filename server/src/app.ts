@@ -13,10 +13,19 @@ import 'dotenv/config'
 
 const app = express();
 
-app.use(cors({
-    origin: process.env.FRONTEND_URL,
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+]
+  .filter((o): o is string => Boolean(o))
+  .map((o) => o.replace(/\/+$/, ""));
+
+app.use(
+  cors({
+    origin: allowedOrigins,
     credentials: true,
-}));
+  })
+);
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 
